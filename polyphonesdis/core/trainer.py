@@ -23,7 +23,6 @@ import polyphonesdis.core.net as net
 import polyphonesdis.core.optimizer as optim
 import polyphonesdis.datasets.loader as data_loader
 import torch
-#import torch.cuda.amp as amp
 from polyphonesdis.core.config import cfg
 from polyphonesdis.core.io import pathmgr
 
@@ -75,8 +74,8 @@ def setup_model():
 
 
 def comp_loss(preds, labels, seq_lens, loss_fun):
-    loss = celoss(input_features.transpose(1, 2), tags)
-    mask = tags > 1
+    loss = loss_fun(preds.transpose(1, 2), labels)
+    mask = labels > 1
     loss = (loss * mask.float()).sum()/mask.sum().item()
     return loss
 
@@ -98,10 +97,9 @@ def train_epoch(loader, model, ema, loss_fun, optimizer, meter, cur_epoch):
             inputs[key] = inputs[key].cuda()
         # inputs, labels = inputs.cuda(), labels.cuda(non_blocking=True)
         labels = labels.cuda()
-        preds = model(inputs)
+        preds = model(inputs, labels, seq_lens)
         
-        loss = comp_loss(preds, labels, seq_lens)
-        
+        loss = comp_loss(preds, labels, seq_lens, loss_fun)
         # Perform the backward pass and update the parameters
         optimizer.zero_grad()
         loss.backward()
@@ -114,16 +112,12 @@ def train_epoch(loader, model, ema, loss_fun, optimizer, meter, cur_epoch):
         # scaler.update()
         
         loss  = dist.scaled_all_reduce([loss])[0]
-        cls_loss = dist.scaled_all_reduce([cls_loss])[0]
-        loc_loss = dist.scaled_all_reduce([loc_loss])[0]
         # Copy the stats from GPU to CPU (sync point)
         loss = loss.item()
-        cls_loss = cls_loss.item()
-        loc_loss = loc_loss.item()
         meter.iter_toc()
         # Update and log stats
-        mb_size = inputs.size(0) * cfg.NUM_GPUS
-        meter.update_stats(0, 0, loss, cls_loss, loc_loss, lr, mb_size)
+        mb_size = inputs['mask'].size(0) * cfg.NUM_GPUS
+        meter.update_stats(0, 0, loss, lr, mb_size)
         meter.log_iter_stats(cur_epoch, cur_iter)
         meter.iter_tic()
     # Log epoch stats
@@ -145,14 +139,12 @@ def test_epoch(loader, model, meter, cur_epoch, loss_fun):
 
         # Compute the predictions
         preds = model(inputs, labels, seq_len)
-        import pdb;pdb.set_trace()
         
-        loss, cls_loss, loc_loss = comp_loss(cls_preds, cls_labels, loc_preds, loc_labels, cls_loss_fun, loc_loss_fun)
+        loss = comp_loss(inputs, labels, seq_len, loss_fun)
         # Compute the errors
         accuracy, recall = meter.acc(cls_preds, cls_labels)
         acc += accuracy.item()
         rec += recall.item()
-    import pdb;pdb.set_trace()
     print('acc is', acc/len(loader))
     print('recall is', recall/len(loader))
         # top1_err, top5_err = meters.topk_errors(preds, labels, [1, 5])

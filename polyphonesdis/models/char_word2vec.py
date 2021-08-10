@@ -22,9 +22,8 @@ class CHARW2VNet(nn.Module):
     """
 
     def __init__(self,
-                 device='cpu',
+                 device='cuda:0',
                  vocab_size=4941,
-                 #feature_to_index,
                  tags_size=204,
                  embedding_dim=128,
                  num_layers=1,
@@ -118,6 +117,6 @@ class CHARW2VNet(nn.Module):
         y = PackedSequence(y, batch_sizes)
 
         y, _ = pad_packed_sequence(y, batch_first=True)
-        mask = (torch.unsqueeze(1 - mask, dim=1)*(-float('inf'))).float().to(self.device)
+        mask = (torch.unsqueeze(1 - mask, dim=1)*(-1e5)).float().to(self.device)
         y = y + mask
         return y

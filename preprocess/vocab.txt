@@ -1,4 +1,5 @@
 word
+    <pad>
 	<unk>
 	的
 	NUM
@@ -4939,6 +4940,7 @@ word
 	嗲
 	駉
 pos
+    <pad>
 	_
 	n
 	v
@@ -4968,12 +4970,14 @@ pos
 	x
 	wp
 position
+    <pad>
 	_
 	S
 	E
 	B
 	I
 target
+    <pad>
 	_
 	false
 	true

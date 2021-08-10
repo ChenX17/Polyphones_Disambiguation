@@ -1,6 +1,7 @@
 import os
-
-def load_vocabs(path_vocab):
+import re
+import json
+def load_vocab(path_vocab):
     feature_to_index = dict()
     index_to_feature = dict()
     with open(path_vocab, "r") as fp:
@@ -17,6 +18,12 @@ def load_vocabs(path_vocab):
         index += 1
     return feature_to_index, index_to_feature
 
+def load_poly_lexicon():
+    poly_lexicon_path = 'preprocess/poly_lexocon.json'
+    f = open(poly_lexicon_path, 'r')
+    poly_lexicon = json.load(f)
+    f.close()
+    return poly_lexicon
 
 def build_tags_from_file(tags_file, padding_tag=0):
     with open(tags_file) as fp:

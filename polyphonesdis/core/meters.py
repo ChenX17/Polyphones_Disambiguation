@@ -46,9 +46,8 @@ def topk_errors(preds, labels, ks):
     topks_correct = [top_max_k_correct[:k, :].reshape(-1).float().sum() for k in ks]
     return [(1.0 - x / preds.size(0)) * 100.0 for x in topks_correct]
 
-def acc(preds, labels):
+def accuracy(preds, labels):
     threshold = 0.5
-    import pdb;pdb.set_trace()
     """Computes the top-k error for each k."""
     err_str = "Batch dim of predictions and labels must match"
     assert preds.size(0) == labels.size(0), err_str
@@ -58,6 +57,7 @@ def acc(preds, labels):
     accuracy = 0.0
     return accuracy
 
+def acc()
 
 def gpu_mem_usage():
     """Computes the GPU memory usage for the current device (MB)."""
@@ -102,8 +102,6 @@ class TrainMeter(object):
         self.phase = phase
         self.iter_timer = Timer()
         self.loss = ScalarMeter(cfg.LOG_PERIOD)
-        self.cls_loss = ScalarMeter(cfg.LOG_PERIOD)
-        self.loc_loss = ScalarMeter(cfg.LOG_PERIOD)
         self.loss_total = 0.0
         self.lr = None
         # Current minibatch errors (smoothed over a window)
@@ -118,8 +116,6 @@ class TrainMeter(object):
         if timer:
             self.iter_timer.reset()
         self.loss.reset()
-        self.loc_loss.reset()
-        self.cls_loss.reset()
         self.loss_total = 0.0
         self.lr = None
         self.mb_top1_err.reset()
@@ -134,13 +130,11 @@ class TrainMeter(object):
     def iter_toc(self):
         self.iter_timer.toc()
 
-    def update_stats(self, top1_err, top5_err, loss, cls_loss, loc_loss, lr, mb_size):
+    def update_stats(self, top1_err, top5_err, loss, lr, mb_size):
         # Current minibatch stats
         self.mb_top1_err.add_value(top1_err)
         self.mb_top5_err.add_value(top5_err)
         self.loss.add_value(loss)
-        self.cls_loss.add_value(cls_loss)
-        self.loc_loss.add_value(loc_loss)
         self.lr = lr
         # Aggregate stats
         self.num_top1_mis += top1_err * mb_size
@@ -161,8 +155,6 @@ class TrainMeter(object):
             "top1_err": self.mb_top1_err.get_win_median(),
             "top5_err": self.mb_top5_err.get_win_median(),
             "loss": self.loss.get_win_median(),
-            "loss_cls": self.cls_loss.get_win_median(),
-            "loss_loc": self.loc_loss.get_win_median(),
             "lr": self.lr,
             "mem": int(np.ceil(mem_usage)),
         }
