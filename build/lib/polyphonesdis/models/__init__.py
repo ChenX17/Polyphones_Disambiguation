@@ -1,0 +1,1 @@
+from polyphonesdis.models.model_zoo import beatnet

@@ -1,0 +1,7 @@
+preprocess/raw19/
+preprocess/raw_cut0802/
+preprocess/data/
+preprocess/embeddings/
+preprocess/ripe_word2vec_7w/
+preprocess/ripe_char_word2vec_pos_cws_flag/
+polyphonesdis.egg-info/
