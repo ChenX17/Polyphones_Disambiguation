@@ -1,23 +1,21 @@
 import os
 
-def load_vocab(path_vocab):
-    """Load vocabulary from a file containing one word per line.
-
-    Args:
-        path_vocab (str): Path of vocab file.
-
-    Returns: A map from word to index, and a map from index to word.
-
-    """
-    word_to_index = {}
-    index_to_word = {}
-    with open(path_vocab, "r") as fin:
-        index = 0
-        for line in fin:
-            word_to_index[line.strip()] = index
-            index_to_word[index] = line.strip()
-            index += 1
-    return word_to_index, index_to_word
+def load_vocabs(path_vocab):
+    feature_to_index = dict()
+    index_to_feature = dict()
+    with open(path_vocab, "r") as fp:
+        lines = fp.readlines()
+    for line in lines:
+        if re.search('^[^\t]', line):
+            name = line.strip()
+            index = 0
+            feature_to_index[name] = dict()
+            index_to_feature[name] = dict()
+            continue
+        feature_to_index[name][line.strip()] = index
+        index_to_feature[name][index] = line.strip()
+        index += 1
+    return feature_to_index, index_to_feature
 
 
 def build_tags_from_file(tags_file, padding_tag=0):
