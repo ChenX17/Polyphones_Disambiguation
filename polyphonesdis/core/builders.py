@@ -13,6 +13,7 @@ from polyphonesdis.models.char_word2vec import CHARW2VNet
 
 from torch.nn import MSELoss
 from torch.nn import BCELoss
+from torch.nn import CrossEntropyLoss
 
 
 # Supported models
@@ -20,7 +21,7 @@ _models = {"charw2c": CHARW2VNet}
 
 # Supported loss functions
 _loss_funs = {
-    "cross_entropy": SoftCrossEntropyLoss,
+    "cross_entropy": CrossEntropyLoss,
     "mse_loss": MSELoss,
     "bce_loss": BCELoss}
 
