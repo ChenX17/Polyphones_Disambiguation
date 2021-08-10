@@ -57,7 +57,13 @@ def accuracy(preds, labels):
     accuracy = 0.0
     return accuracy
 
-def acc()
+def acc(mask, y, predicts):
+    mask_poly = y > 1
+    total_correct_poly += ((predicts == y) * mask * mask_poly).sum().item()
+    total_poly += mask_poly.sum().item()
+    acc = total_correct_poly / total_poly
+    return acc
+
 
 def gpu_mem_usage():
     """Computes the GPU memory usage for the current device (MB)."""

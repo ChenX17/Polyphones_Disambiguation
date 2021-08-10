@@ -142,7 +142,12 @@ def test_epoch(loader, model, meter, cur_epoch, loss_fun):
         
         loss = comp_loss(inputs, labels, seq_len, loss_fun)
         # Compute the errors
-        accuracy, recall = meter.acc(cls_preds, cls_labels)
+
+        batch_size, max_seq_len = inputs['char'].size()
+        mask = torch.arange(max_seq_len).cuda().expand(
+                batch_size, max_seq_len) < seq_lens.unsqueeze(1)
+
+        accuracy, recall = meter.acc(mask, labels, preds)
         acc += accuracy.item()
         rec += recall.item()
     print('acc is', acc/len(loader))
