@@ -9,9 +9,11 @@ import jieba
 import jieba.posseg
 from multiprocessing import Pool
 import numpy as np
+import copy
 
 raw_dir = 'raw_cut0802/'
 ripe_dir = 'ripe_char_word2vec_pos_cws_flag/'
+re_en = re.compile('E{2,}')
 
 print(glob.glob(raw_dir+'*.txt'))
 
@@ -41,11 +43,13 @@ def re_cut(model, words):
         new_cut = []
         flag = True
         for item in words:
-            if item not in model.key_to_index and len(item) >= 3:
+            if re_en.search(item):
+                for char in item:
+                    new_cut.append(char)
+            elif item not in model.key_to_index and len(item) >= 3:
                 jieba.del_word(item)
                 flag=False
                 re_cut_words = list(jieba.cut(item))
-                #re_cut_words = [tmp.word for tmp in list(jieba.posseg.cut(item))]
                 for word in re_cut_words:
                     new_cut.append(word)
             else:
@@ -189,15 +193,25 @@ def read_file(filename, pro=0):
         if len(line.strip().split('\t'))!=4:
             import pdb;pdb.set_trace()
         uttid, word, label, text = line.strip().split('\t')
+        idx += 1
+        
+        if int(uttid) < 45700:
+            continue
+        # print(text)
         parts = re_cut.split(text)
         label = ['_']*len(parts[0]) + [label] + ['_']*len(parts[2])
         text = parts[0] + word + parts[2]
         text = list(text)
+        ori_text = copy.deepcopy(text)
 
-        for i,tmp_char in enumerate(text):
+        space_num = 0
+
+        for i,tmp_char in enumerate(ori_text):
             if tmp_char == ' ':
-                text.pop(i)
-                label.pop(i)
+                text.pop(i-space_num)
+                label.pop(i-space_num)
+                
+                space_num+=1
 
         text = ''.join(text)
         label = ' '.join(label)
@@ -209,24 +223,19 @@ def read_file(filename, pro=0):
         pos_list = [item.flag for item in word_pos]
 
         # vec = get_vec(model_words, list(jieba.cut(text)))
-        # print('get vec')
+        
         vec, pos, cuted_text = get_vec(model_words, word_list, pos_list)
-        # print('get pos')
+        
         pos = get_pos(cuted_text, pos)
         cws = get_cws(cuted_text)
         flag = get_flag(label.split(' '))
-        # print('write')
-        # word_pos = list(jieba.posseg.cut(text))
-        #import pdb;pdb.set_trace()
-        # word_list = [item.word for item in word_pos]
-        # pos_list = [item.flag for item in word_pos]
-        # if ' '.join(list(jieba.cut(text))) != ' '.join(word_list):
-        #     print(' '.join(list(jieba.cut(text))))
-        #     print(' '.join(word_list))
-        #     import pdb;pdb.set_trace()
-        # import pdb;pdb.set_trace()
+        text = ''.join(cuted_text)
+        if not len(text)==len(vec)==len(pos)==len(cws)==len(flag):
+            import pdb;pdb.set_trace()
 
-        idx += 1
+        assert len(text)==len(vec)==len(pos)==len(cws)==len(flag)
+
+        
         df_data = {
                     "texts": text,
                     "labels": label,
@@ -239,7 +248,7 @@ def read_file(filename, pro=0):
         f = open(save_path, 'wb')
         df_data = pickle.dump(df_data, f)
         f.close()
-        if idx % 10 == 0:
+        if idx % 100 == 0:
             print(idx,' sentences!')
 
 
