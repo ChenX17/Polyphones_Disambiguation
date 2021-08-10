@@ -22,7 +22,7 @@ CFG_DEST: config.yaml
 CUDNN:
   BENCHMARK: true
 DATA_LOADER:
-  NUM_WORKERS: 4
+  NUM_WORKERS: 0
   PIN_MEMORY: true
 DESC: ''
 DIST_BACKEND: nccl

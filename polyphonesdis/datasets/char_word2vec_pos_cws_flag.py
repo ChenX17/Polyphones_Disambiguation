@@ -17,7 +17,7 @@ class CHARW2CPOSCWSFLAGDataSet(torch.utils.data.Dataset):
         f = open(data_path+'/'+split+'files.txt')
         self.data_list = f.readlines()
         f.close()
-        self.data_list = [data_path+'/'+'total_'+split+item for item in self.data_list]
+        self.data_list = [data_path+'/'+'total_'+split+'/'+item.strip() for item in self.data_list]
         self.feature_to_index, self.index_to_feature = load_vocab(vocab_path)
         self.tag_to_index, self.index_to_tag = build_tags_from_file(tag_path)
 
@@ -27,11 +27,12 @@ class CHARW2CPOSCWSFLAGDataSet(torch.utils.data.Dataset):
         lines = pickle.load(open(self.data_list[index], 'rb'))
         words = list(lines['texts'])
         words = ['ENG' if item=='E' else item for item in words]
-        tags = lines['labels'][i].split(' ')
+        tags = lines['labels'].split(' ')
         word2vecs = lines['embeddings']
         pos = lines['pos']
         cws = lines['cws']
         flag = lines['flag']
+        import pdb;pdb.set_trace()
 
         word_ids = [
             self.feature_to_index['word'][w]
