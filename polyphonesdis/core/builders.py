@@ -49,9 +49,9 @@ def build_model():
     return get_model()()
 
 
-def build_loss_fun(loss=None):
+def build_loss_fun(loss=None, reduction='mean'):
     """Build the loss function."""
-    return get_loss_fun(loss)()
+    return get_loss_fun(loss)(reduction=reduction)
 
 
 def register_model(name, ctor):

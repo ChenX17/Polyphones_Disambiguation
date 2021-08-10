@@ -74,16 +74,18 @@ class CHARW2VNet(nn.Module):
 
         return loss
     
-    def forward(self, inputs, embedding_inputs, target, seq_lens, mask):
+    def forward(self, inputs, target, seq_lens):
         """Returns the bilstm output features given the input sentence.
 
         :param batch_input:
         :return:
         """
+        embedding_inputs = inputs['word2vecs']
+        mask = inputs['mask']
 
         batch_size = embedding_inputs.shape[0]
 
-        input_features = self.word_embeds(inputs)
+        input_features = self.word_embeds(inputs['char'])
         input_features = self.dropout(self.layernorm(input_features))
         input_features = torch.cat((input_features,embedding_inputs.float()), 2)
 

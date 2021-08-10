@@ -63,8 +63,6 @@ def setup_model():
     # logger.info(logging.dump_log_data(net.complexity(model), "complexity"))
     # Transfer the model to the current GPU device
     err_str = "Cannot use more GPU devices than available"
-    if cfg.NUM_GPUS > torch.cuda.device_count():
-        return model
     assert cfg.NUM_GPUS <= torch.cuda.device_count(), err_str
     cur_device = torch.cuda.current_device()
     model = model.cuda(device=cur_device)
@@ -76,21 +74,13 @@ def setup_model():
     return model
 
 
-def comp_loss(cls_pred, cls_label, loc_pred, loc_label, cls_loss_func, loc_loss_func):
-    # cls_loss = cls_loss_func(cls_pred, cls_label)
-    cls_loss = F.binary_cross_entropy_with_logits(
-        cls_pred,
-        cls_label,
-        reduce="mean"
-    )
+def comp_loss(preds, labels, seq_lens, loss_fun):
+    loss = celoss(input_features.transpose(1, 2), tags)
+    mask = tags > 1
+    loss = (loss * mask.float()).sum()/mask.sum().item()
+    return loss
 
-    loc_loss = F.mse_loss(loc_pred, loc_label, reduction='none')
-    loc_loss = torch.sum(loc_loss * cls_label) / torch.sum(cls_label)
-    
-    # loc_loss = loc_loss_func(loc_pred, loc_label)
-    return 0.5 * cls_loss+loc_loss, cls_loss, loc_loss
-
-def train_epoch(loader, model, ema, cls_loss_fun, loc_loss_fun, optimizer, meter, cur_epoch):
+def train_epoch(loader, model, ema, loss_fun, optimizer, meter, cur_epoch):
     """Performs one epoch of training."""
     # Shuffle the data
     data_loader.shuffle(loader, cur_epoch)
@@ -102,30 +92,15 @@ def train_epoch(loader, model, ema, cls_loss_fun, loc_loss_fun, optimizer, meter
     ema.train()
     meter.reset()
     meter.iter_tic()
-    for cur_iter, (inputs, labels) in enumerate(loader):
+    for cur_iter, (inputs, labels, seq_lens) in enumerate(loader):
         # Transfer the data to the current GPU device
-        inputs, labels = inputs.cuda(), labels.cuda(non_blocking=True)
-        
-        labels = torch.reshape(labels, shape=(labels.size(0), 2, 15))
-        
-        # labels = labels.view(labels.size(0), 2, 15)
-        # cls_labels = labels[:, 0].int()
-        
-        cls_labels = labels[:, 0, :].contiguous().view(-1)
-        loc_labels = labels[:, 1, :].contiguous().view(-1)
-        # Convert labels to smoothed one-hot vector
-        # labels_one_hot = net.smooth_one_hot_labels(labels)
-        # Apply mixup to the batch (no effect if mixup alpha is 0)
-        # inputs, labels_one_hot, labels = net.mixup(inputs, labels_one_hot)
-        # Perform the forward pass and compute the loss
-        # import pdb;pdb.set_trace()
-        # with amp.autocast(enabled=cfg.TRAIN.MIXED_PRECISION):
+        for key in inputs.keys():
+            inputs[key] = inputs[key].cuda()
+        # inputs, labels = inputs.cuda(), labels.cuda(non_blocking=True)
+        labels = labels.cuda()
         preds = model(inputs)
-        preds = preds.view(preds.size(0), 15, 2).view(-1, 2)
-        loc_preds = preds[:, 1]
-        cls_preds = preds[:, 0]
-        loss, cls_loss, loc_loss = comp_loss(cls_preds, cls_labels, loc_preds, loc_labels, cls_loss_fun, loc_loss_fun)
-            # loss = loss_fun(loc_preds, loc_labels)
+        
+        loss = comp_loss(preds, labels, seq_lens)
         
         # Perform the backward pass and update the parameters
         optimizer.zero_grad()
@@ -156,7 +131,7 @@ def train_epoch(loader, model, ema, cls_loss_fun, loc_loss_fun, optimizer, meter
 
 
 @torch.no_grad()
-def test_epoch(loader, model, meter, cur_epoch, cls_loss_fun, loc_loss_fun):
+def test_epoch(loader, model, meter, cur_epoch, loss_fun):
     """Evaluates the model on the test set."""
     # Enable eval mode
     model.eval()
@@ -201,8 +176,7 @@ def train_model():
     # Construct the model, ema, loss_fun, and optimizer
     model = setup_model()
     ema = deepcopy(model)
-    cls_loss_fun = builders.build_loss_fun("bce_loss").cuda()
-    loc_loss_fun = builders.build_loss_fun("mse_loss").cuda()
+    loss_fun = builders.build_loss_fun("cross_entropy", "none").cuda()
     optimizer = optim.construct_optimizer(model)
     # Load checkpoint or initial weights
     start_epoch = 0
@@ -220,29 +194,18 @@ def train_model():
     train_meter = meters.TrainMeter(len(train_loader))
     test_meter = meters.TestMeter(len(test_loader))
     ema_meter = meters.TestMeter(len(test_loader), "test_ema")
-    # Create a GradScaler for mixed precision training
-    # scaler = amp.GradScaler(enabled=cfg.TRAIN.MIXED_PRECISION)
-    # Compute model and loader timings
-    # if start_epoch == 0 and cfg.PREC_TIME.NUM_ITER > 0:
-    #     benchmark.compute_time_full(model, cls_loss_fun, loc_loss_fun, train_loader, test_loader)
     # Perform the training loop
     logger.info("Start epoch: {}".format(start_epoch + 1))
     for cur_epoch in range(start_epoch, cfg.OPTIM.MAX_EPOCH):
         # Train for one epoch
-        params = (train_loader, model, ema, cls_loss_fun, loc_loss_fun, optimizer, train_meter)
+        params = (train_loader, model, ema, loss_fun, optimizer, train_meter)
         train_epoch(*params, cur_epoch)
         # Compute precise BN stats
         if cfg.BN.USE_PRECISE_STATS:
             net.compute_precise_bn_stats(model, train_loader)
             net.compute_precise_bn_stats(ema, train_loader)
         # Evaluate the model
-        test_epoch(test_loader, model, test_meter, cur_epoch, cls_loss_fun, loc_loss_fun)
-        # test_epoch(test_loader, ema, ema_meter, cur_epoch)
-        # test_err = test_meter.get_epoch_stats(cur_epoch)["top1_err"]
-        # ema_err = ema_meter.get_epoch_stats(cur_epoch)["top1_err"]
-        # # Save a checkpoint
-        # file = cp.save_checkpoint(model, ema, optimizer, cur_epoch, test_err, ema_err)
-        # logger.info("Wrote checkpoint to: {}".format(file))
+        test_epoch(test_loader, model, test_meter, cur_epoch, loss_fun)
 
 
 def test_model():
