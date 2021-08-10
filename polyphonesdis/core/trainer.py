@@ -117,7 +117,7 @@ def train_epoch(loader, model, ema, loss_fun, optimizer, meter, cur_epoch):
         meter.iter_toc()
         # Update and log stats
         mb_size = inputs['mask'].size(0) * cfg.NUM_GPUS
-        meter.update_stats(0, 0, loss, lr, mb_size)
+        meter.update_stats(loss, lr, mb_size)
         meter.log_iter_stats(cur_epoch, cur_iter)
         meter.iter_tic()
     # Log epoch stats
