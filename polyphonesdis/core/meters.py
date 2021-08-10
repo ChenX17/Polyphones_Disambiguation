@@ -58,10 +58,11 @@ def accuracy(preds, labels):
     return accuracy
 
 def acc(mask, y, predicts):
+    predicts = torch.argmax(predicts, dim=-1)
     mask_poly = y > 1
-    total_correct_poly += ((predicts == y) * mask * mask_poly).sum().item()
-    total_poly += mask_poly.sum().item()
-    acc = total_correct_poly / total_poly
+    total_correct_poly = ((predicts == y) * mask * mask_poly).sum().item()
+    total_poly = mask_poly.sum().item()
+    acc = float(total_correct_poly) / float(total_poly)
     return acc
 
 
@@ -109,6 +110,8 @@ class TrainMeter(object):
         self.iter_timer = Timer()
         self.loss = ScalarMeter(cfg.LOG_PERIOD)
         self.loss_total = 0.0
+        self.acc = 0.0
+        self.acc_total = 0.0
         self.lr = None
         self.num_samples = 0
 
@@ -126,13 +129,15 @@ class TrainMeter(object):
     def iter_toc(self):
         self.iter_timer.toc()
 
-    def update_stats(self, top1_err, top5_err, loss, lr, mb_size):
+    def update_stats(self, loss, lr, acc,  mb_size):
         # Current minibatch stats
         self.loss.add_value(loss)
         self.lr = lr
         # Aggregate stats
         self.loss_total += loss * mb_size
         self.num_samples += mb_size
+        self.acc = acc
+        self.acc_total += acc
 
     def get_iter_stats(self, cur_epoch, cur_iter):
         cur_iter_total = cur_epoch * self.epoch_iters + cur_iter + 1
@@ -145,6 +150,7 @@ class TrainMeter(object):
             "time_diff": self.iter_timer.diff,
             "eta": time_string(eta_sec),
             "loss": self.loss.get_win_median(),
+            "train_acc": self.acc,
             "lr": self.lr,
             "mem": int(np.ceil(mem_usage)),
         }
@@ -160,12 +166,14 @@ class TrainMeter(object):
         eta_sec = self.iter_timer.average_time * (self.max_iter - cur_iter_total)
         mem_usage = gpu_mem_usage()
         avg_loss = self.loss_total / self.num_samples
+        avg_acc = self.acc_total / self.num_samples
         stats = {
             "epoch": "{}/{}".format(cur_epoch + 1, cfg.OPTIM.MAX_EPOCH),
             "time_avg": self.iter_timer.average_time,
             "time_epoch": self.iter_timer.average_time * self.epoch_iters,
             "eta": time_string(eta_sec),
             "loss": avg_loss,
+            "avg_train_acc": avg_acc,
             "lr": self.lr,
             "mem": int(np.ceil(mem_usage)),
         }

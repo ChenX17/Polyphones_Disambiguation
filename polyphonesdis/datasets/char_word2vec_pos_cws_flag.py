@@ -73,8 +73,10 @@ class CHARW2CPOSCWSFLAGDataSet(torch.utils.data.Dataset):
         word2vecs = np.zeros((len(sorted_batch), sorted_batch[0][1].shape[0], sorted_batch[0][1].shape[1]))
         for i,x_y in enumerate(sorted_batch):
             if seq_lens[i] != x_y[1].shape[0]:
-                import pdb;pdb.set_trace()
-            word2vecs[i, :seq_lens[i], :]=x_y[1]
+                print('different length')
+                word2vecs[i, :x_y[1].shape[0], :]=x_y[1]
+            else:
+                word2vecs[i, :seq_lens[i], :]=x_y[1]
         word2vecs = torch.tensor(word2vecs, dtype=torch.float16,)
         mask = torch.tensor([x_y[3] for x_y in sorted_batch], dtype=torch.int16)
 
