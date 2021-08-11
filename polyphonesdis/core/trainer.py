@@ -25,6 +25,7 @@ import polyphonesdis.datasets.loader as data_loader
 import torch
 from polyphonesdis.core.config import cfg
 from polyphonesdis.core.io import pathmgr
+from polyphonesdis.core.meters import acc
 
 
 logger = logging.get_logger(__name__)
@@ -95,7 +96,6 @@ def train_epoch(loader, model, ema, loss_fun, optimizer, meter, cur_epoch):
         # Transfer the data to the current GPU device
         for key in inputs.keys():
             inputs[key] = inputs[key].cuda()
-        # inputs, labels = inputs.cuda(), labels.cuda(non_blocking=True)
         labels = labels.cuda()
         preds = model(inputs, labels, seq_lens)
         
@@ -105,19 +105,18 @@ def train_epoch(loader, model, ema, loss_fun, optimizer, meter, cur_epoch):
         loss.backward()
         optimizer.step()
 
+        batch_size, max_seq_len = inputs['char'].size()
+        mask = (torch.arange(max_seq_len).expand(
+                batch_size, max_seq_len) < seq_lens.unsqueeze(1)).cuda()
+        accuracy = acc(mask, labels, preds)
 
-
-        # scaler.scale(loss).backward()
-        # scaler.step(optimizer)
-        # scaler.update()
-        
         loss  = dist.scaled_all_reduce([loss])[0]
         # Copy the stats from GPU to CPU (sync point)
         loss = loss.item()
         meter.iter_toc()
         # Update and log stats
         mb_size = inputs['mask'].size(0) * cfg.NUM_GPUS
-        meter.update_stats(loss, lr, mb_size)
+        meter.update_stats(loss, lr, accuracy, mb_size)
         meter.log_iter_stats(cur_epoch, cur_iter)
         meter.iter_tic()
     # Log epoch stats
@@ -131,39 +130,26 @@ def test_epoch(loader, model, meter, cur_epoch, loss_fun):
     model.eval()
     meter.reset()
     meter.iter_tic()
-    acc = 0.0
+    total_acc = 0.0
     rec = 0.0
-    for cur_iter, (inputs, labels, seq_len) in enumerate(loader):
+    for cur_iter, (inputs, labels, seq_lens) in enumerate(loader):
         # Transfer the data to the current GPU device
-        inputs, labels = inputs.cuda(), labels.cuda(non_blocking=True)
+        for key in inputs.keys():
+            inputs[key] = inputs[key].cuda()
+        labels = labels.cuda()
 
         # Compute the predictions
-        preds = model(inputs, labels, seq_len)
-        
-        loss = comp_loss(inputs, labels, seq_len, loss_fun)
+        preds = model(inputs, labels, seq_lens)
+        loss = comp_loss(preds, labels, seq_lens, loss_fun)
         # Compute the errors
 
         batch_size, max_seq_len = inputs['char'].size()
-        mask = torch.arange(max_seq_len).cuda().expand(
-                batch_size, max_seq_len) < seq_lens.unsqueeze(1)
-
-        accuracy, recall = meter.acc(mask, labels, preds)
-        acc += accuracy.item()
-        rec += recall.item()
-    print('acc is', acc/len(loader))
-    print('recall is', recall/len(loader))
-        # top1_err, top5_err = meters.topk_errors(preds, labels, [1, 5])
-        # Combine the errors across the GPUs  (no reduction if 1 GPU used)
-        # # top1_err, top5_err = dist.scaled_all_reduce([top1_err, top5_err])
-        # Copy the errors from GPU to CPU (sync point)
-        # top1_err, top5_err = top1_err.item(), top5_err.item()
-        # meter.iter_toc()
-        # Update and log stats
-        # meter.update_stats(top1_err, top5_err, inputs.size(0) * cfg.NUM_GPUS)
-        # meter.log_iter_stats(cur_epoch, cur_iter)
-        # meter.iter_tic()
-    # Log epoch stats
-    # meter.log_epoch_stats(cur_epoch)
+        mask = (torch.arange(max_seq_len).expand(
+                batch_size, max_seq_len) < seq_lens.unsqueeze(1)).cuda()
+        
+        accuracy = acc(mask, labels, preds)
+        total_acc += accuracy * batch_size
+    print('acc is', total_acc/len(loader))
 
 
 def train_model():
@@ -197,10 +183,12 @@ def train_model():
         # Train for one epoch
         params = (train_loader, model, ema, loss_fun, optimizer, train_meter)
         train_epoch(*params, cur_epoch)
+        '''
         # Compute precise BN stats
         if cfg.BN.USE_PRECISE_STATS:
             net.compute_precise_bn_stats(model, train_loader)
             net.compute_precise_bn_stats(ema, train_loader)
+        '''
         # Evaluate the model
         test_epoch(test_loader, model, test_meter, cur_epoch, loss_fun)
 

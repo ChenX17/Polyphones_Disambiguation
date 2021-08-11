@@ -8,17 +8,21 @@ import torch
 import pickle
 
 import polyphonesdis.core.logging as logging
-from polyphonesdis.core.utils import load_vocab, build_tags_from_file, gen_mask, find_word
+from polyphonesdis.datasets.utils import load_vocab, build_tags_from_file, gen_mask, find_word, load_poly_lexicon
 
 
 class CHARW2CPOSCWSFLAGDataSet(torch.utils.data.Dataset):
     """CHAR&WORD2VEC dataset"""
     def __init__(self, data_path, split, vocab_path, tag_path):
-        f = open(data_path+'/'+split)
+        f = open(data_path+'/'+split+'files.txt')
         self.data_list = f.readlines()
         f.close()
+        self.data_list = [data_path+'/'+'total_'+split+'/'+item.strip() for item in self.data_list]
         self.feature_to_index, self.index_to_feature = load_vocab(vocab_path)
         self.tag_to_index, self.index_to_tag = build_tags_from_file(tag_path)
+        self.unk_feat_id = 1
+        self.pad_tag_id = 0
+        self.poly_lexicon = load_poly_lexicon()
 
 
     
@@ -72,10 +76,12 @@ class CHARW2CPOSCWSFLAGDataSet(torch.utils.data.Dataset):
         word2vecs = np.zeros((len(sorted_batch), sorted_batch[0][1].shape[0], sorted_batch[0][1].shape[1]))
         for i,x_y in enumerate(sorted_batch):
             if seq_lens[i] != x_y[1].shape[0]:
-                import pdb;pdb.set_trace()
-            word2vecs[i, :seq_lens[i], :]=x_y[1]
-        word2vecs = torch.tensor(word2vecs, dtype=torch.float16, device=self.device)
-        mask = torch.tensor([x_y[3] for x_y in sorted_batch])
+                print('different length')
+                word2vecs[i, :x_y[1].shape[0], :]=x_y[1]
+            else:
+                word2vecs[i, :seq_lens[i], :]=x_y[1]
+        word2vecs = torch.tensor(word2vecs, dtype=torch.float16,)
+        mask = torch.tensor([x_y[3] for x_y in sorted_batch], dtype=torch.int16)
 
         padded_pos = torch.tensor([
             x_y[4] + [self.pad_tag_id] * (maxlen - len(x_y[4])) for x_y in sorted_batch

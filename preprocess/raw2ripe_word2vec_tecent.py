@@ -63,17 +63,17 @@ def get_cws(cuted_text):
     cws = []
     for item in cuted_text:
         if len(item)== 1:
-            cws.append('s')
+            cws.append('S')
         elif len(item)==2:
-            cws.append('b')
-            cws.append('e')
+            cws.append('B')
+            cws.append('E')
         else:
             count = len(item)-2
-            cws.append('b')
+            cws.append('B')
             while count >0:
-                cws.append('m')
+                cws.append('M')
                 count -= 1
-            cws.append('e')
+            cws.append('E')
     return cws
 
 def get_pos(texts ,pos_list):
@@ -188,6 +188,7 @@ def read_file(filename, pro=0):
     data = []
     sentences = []
     phrases = []
+    filelist = []
     model_words = KeyedVectors.load_word2vec_format("embeddings/70000-small.txt")
     for line in texts_lines:
         if len(line.strip().split('\t'))!=4:
@@ -195,8 +196,6 @@ def read_file(filename, pro=0):
         uttid, word, label, text = line.strip().split('\t')
         idx += 1
         
-        if int(uttid) < 45700:
-            continue
         # print(text)
         parts = re_cut.split(text)
         label = ['_']*len(parts[0]) + [label] + ['_']*len(parts[2])
@@ -245,13 +244,16 @@ def read_file(filename, pro=0):
                     "flag": flag,
                     }
         save_path = ripe_dir+filename.split('.')[0].split('/')[-1]+'/'+uttid+".pkl"
+        filelist.append(uttid+".pkl")
         f = open(save_path, 'wb')
         df_data = pickle.dump(df_data, f)
         f.close()
         if idx % 100 == 0:
             print(idx,' sentences!')
 
-
+    f = open(ripe_dir+filename.split('.')[0].split('/')[-1].split('_')[1]+'files.txt')
+    f.writelines('\n'.join(filelist))
+    f.close()
     print('end ', save_path)
 if __name__=='__main__':
     from multiprocessing import Process

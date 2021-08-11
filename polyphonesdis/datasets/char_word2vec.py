@@ -8,7 +8,7 @@ import torch
 import pickle
 
 import polyphonesdis.core.logging as logging
-from polyphonesdis.datasets.utils import load_vocab, build_tags_from_file, gen_mask, find_word
+from polyphonesdis.datasets.utils import load_vocab, build_tags_from_file, gen_mask, find_word, load_poly_lexicon
 
 
 class CHARW2CDataSet(torch.utils.data.Dataset):
@@ -17,9 +17,12 @@ class CHARW2CDataSet(torch.utils.data.Dataset):
         f = open(data_path+'/'+split+'files.txt')
         self.data_list = f.readlines()
         f.close()
-        self.data_list = [data_path+'/'+'total_'+split+item for item in self.data_list]
+        self.data_list = [data_path+'/'+'total_'+split+'/'+item.strip() for item in self.data_list]
         self.feature_to_index, self.index_to_feature = load_vocab(vocab_path)
         self.tag_to_index, self.index_to_tag = build_tags_from_file(tag_path)
+        self.unk_feat_id = 1
+        self.pad_tag_id = 0
+        self.poly_lexicon = load_poly_lexicon()
 
 
     
@@ -72,7 +75,8 @@ class CHARW2CDataSet(torch.utils.data.Dataset):
             padding_f4[i, :seq_lens[i], :]=x_y[1]
         padding_f4 = torch.tensor(padding_f4, dtype=torch.float16, device=self.device)
         mask = torch.tensor([x_y[3] for x_y in sorted_batch])
-        return padded_x, padding_f4, padded_y, seq_lens, mask
+        features_dict = {'char': padded_x, 'word2vecs': word2vecs, 'mask': mask}
+        return features_dict, padded_y, seq_lens
     
     def __len__(self):
         return len(self.data_list)
