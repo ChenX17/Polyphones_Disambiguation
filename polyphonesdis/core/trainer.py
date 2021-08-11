@@ -75,6 +75,7 @@ def setup_model():
 
 
 def comp_loss(preds, labels, seq_lens, loss_fun):
+    import pdb;pdb.set_trace()
     loss = loss_fun(preds.transpose(1, 2), labels)
     mask = labels > 1
     loss = (loss * mask.float()).sum()/mask.sum().item()
@@ -108,7 +109,7 @@ def train_epoch(loader, model, ema, loss_fun, optimizer, meter, cur_epoch):
         batch_size, max_seq_len = inputs['char'].size()
         mask = (torch.arange(max_seq_len).expand(
                 batch_size, max_seq_len) < seq_lens.unsqueeze(1)).cuda()
-        accuracy = acc(mask, labels, preds)
+        accuracy, _, _ = acc(mask, labels, preds)
 
         loss  = dist.scaled_all_reduce([loss])[0]
         # Copy the stats from GPU to CPU (sync point)
@@ -131,6 +132,8 @@ def test_epoch(loader, model, meter, cur_epoch, loss_fun):
     meter.reset()
     meter.iter_tic()
     total_acc = 0.0
+    total_poly = 0
+    total_correct_poly = 0
     rec = 0.0
     for cur_iter, (inputs, labels, seq_lens) in enumerate(loader):
         # Transfer the data to the current GPU device
@@ -147,9 +150,11 @@ def test_epoch(loader, model, meter, cur_epoch, loss_fun):
         mask = (torch.arange(max_seq_len).expand(
                 batch_size, max_seq_len) < seq_lens.unsqueeze(1)).cuda()
         
-        accuracy = acc(mask, labels, preds)
-        total_acc += accuracy * batch_size
-    print('acc is', total_acc/len(loader))
+        accuracy, poly, correct_poly = acc(mask, labels, preds)
+        total_poly += poly
+        total_correct_poly += correct_poly
+    print('acc: ', float(total_correct_poly)/float(total_poly))
+    return float(total_correct_poly)/float(total_poly)
 
 
 def train_model():
@@ -190,7 +195,11 @@ def train_model():
             net.compute_precise_bn_stats(ema, train_loader)
         '''
         # Evaluate the model
-        test_epoch(test_loader, model, test_meter, cur_epoch, loss_fun)
+        test_acc = test_epoch(test_loader, model, test_meter, cur_epoch, loss_fun)
+        # Save a checkpoint
+        import pdb;pdb.set_trace()
+        file = cp.save_checkpoint(model, ema, optimizer, cur_epoch, test_acc)
+        logger.info("Wrote checkpoint to: {}".format(file))
 
 
 def test_model():

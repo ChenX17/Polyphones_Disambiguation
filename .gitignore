@@ -7,3 +7,4 @@ preprocess/ripe_char_word2vec_pos_cws_flag/
 polyphonesdis.egg-info/
 */__pycache__/
 */*/__pycache__/
+outputs/

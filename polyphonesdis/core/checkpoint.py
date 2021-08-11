@@ -55,7 +55,7 @@ def has_checkpoint():
     return any(_NAME_PREFIX in f for f in pathmgr.ls(checkpoint_dir))
 
 
-def save_checkpoint(model, model_ema, optimizer, epoch, test_err, ema_err):
+def save_checkpoint(model, model_ema, optimizer, epoch, test_acc):
     """Saves a checkpoint and also the best weights so far in a best checkpoint."""
     # Save checkpoints only from the master process
     if not dist.is_master_proc():
@@ -65,8 +65,7 @@ def save_checkpoint(model, model_ema, optimizer, epoch, test_err, ema_err):
     # Record the state
     checkpoint = {
         "epoch": epoch,
-        "test_err": test_err,
-        "ema_err": ema_err,
+        "test_acc": test_acc,
         "model_state": unwrap_model(model).state_dict(),
         "ema_state": unwrap_model(model_ema).state_dict(),
         "optimizer_state": optimizer.state_dict(),
@@ -83,13 +82,11 @@ def save_checkpoint(model, model_ema, optimizer, epoch, test_err, ema_err):
         with pathmgr.open(get_checkpoint_best(), "rb") as f:
             best = torch.load(f, map_location="cpu")
         # Select the best model weights and the best model_ema weights
-        if test_err < best["test_err"] or ema_err < best["ema_err"]:
+        if test_acc > best["test_acc"]:
             if test_err < best["test_err"]:
                 best["model_state"] = checkpoint["model_state"]
-                best["test_err"] = test_err
-            if ema_err < best["ema_err"]:
+                best["test_acc"] = test_acc
                 best["ema_state"] = checkpoint["ema_state"]
-                best["ema_err"] = ema_err
             with pathmgr.open(get_checkpoint_best(), "wb") as f:
                 torch.save(best, f)
     return checkpoint_file

@@ -63,7 +63,7 @@ def acc(mask, y, predicts):
     total_correct_poly = ((predicts == y) * mask * mask_poly).sum().item()
     total_poly = mask_poly.sum().item()
     acc = float(total_correct_poly) / float(total_poly)
-    return acc
+    return acc, total_poly, total_correct_poly
 
 
 def gpu_mem_usage():
