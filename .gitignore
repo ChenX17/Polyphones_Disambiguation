@@ -8,3 +8,5 @@ polyphonesdis.egg-info/
 */__pycache__/
 */*/__pycache__/
 outputs/
+outputs_new/
+preprocess/ripe_word2vec_7w/

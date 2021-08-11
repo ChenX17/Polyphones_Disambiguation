@@ -83,10 +83,9 @@ def save_checkpoint(model, model_ema, optimizer, epoch, test_acc):
             best = torch.load(f, map_location="cpu")
         # Select the best model weights and the best model_ema weights
         if test_acc > best["test_acc"]:
-            if test_err < best["test_err"]:
-                best["model_state"] = checkpoint["model_state"]
-                best["test_acc"] = test_acc
-                best["ema_state"] = checkpoint["ema_state"]
+            best["model_state"] = checkpoint["model_state"]
+            best["test_acc"] = test_acc
+            best["ema_state"] = checkpoint["ema_state"]
             with pathmgr.open(get_checkpoint_best(), "wb") as f:
                 torch.save(best, f)
     return checkpoint_file

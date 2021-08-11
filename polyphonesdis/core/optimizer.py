@@ -44,14 +44,21 @@ def construct_optimizer(model):
         ]
     else:
         optim_params = model.parameters()
-    return torch.optim.SGD(
+
+    return torch.optim.Adam(model.parameters(),
+                           lr=cfg.OPTIM.BASE_LR,
+                           betas=(0.9, 0.999),
+                           eps=1e-08,
+                           weight_decay=cfg.OPTIM.WEIGHT_DECAY,
+                           amsgrad=False)
+    '''return torch.optim.SGD(
         optim_params,
         lr=cfg.OPTIM.BASE_LR,
         momentum=cfg.OPTIM.MOMENTUM,
         weight_decay=cfg.OPTIM.WEIGHT_DECAY,
         dampening=cfg.OPTIM.DAMPENING,
         nesterov=cfg.OPTIM.NESTEROV,
-    )
+    )'''
 
 
 def lr_fun_steps(cur_epoch):

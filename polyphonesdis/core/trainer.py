@@ -75,7 +75,6 @@ def setup_model():
 
 
 def comp_loss(preds, labels, seq_lens, loss_fun):
-    import pdb;pdb.set_trace()
     loss = loss_fun(preds.transpose(1, 2), labels)
     mask = labels > 1
     loss = (loss * mask.float()).sum()/mask.sum().item()
@@ -197,7 +196,6 @@ def train_model():
         # Evaluate the model
         test_acc = test_epoch(test_loader, model, test_meter, cur_epoch, loss_fun)
         # Save a checkpoint
-        import pdb;pdb.set_trace()
         file = cp.save_checkpoint(model, ema, optimizer, cur_epoch, test_acc)
         logger.info("Wrote checkpoint to: {}".format(file))
 

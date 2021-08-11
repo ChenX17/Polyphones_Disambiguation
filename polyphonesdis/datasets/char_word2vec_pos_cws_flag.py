@@ -30,7 +30,7 @@ class CHARW2CPOSCWSFLAGDataSet(torch.utils.data.Dataset):
         lines = pickle.load(open(self.data_list[index], 'rb'))
         words = list(lines['texts'])
         words = ['ENG' if item=='E' else item for item in words]
-        tags = lines['labels'][i].split(' ')
+        tags = lines['labels'].split(' ')
         word2vecs = lines['embeddings']
         pos = lines['pos']
         cws = lines['cws']
@@ -60,19 +60,19 @@ class CHARW2CPOSCWSFLAGDataSet(torch.utils.data.Dataset):
         """
         sorted_batch = sorted(batch, key=lambda x_y: len(x_y[0]), reverse=True)
         seq_lens = torch.tensor([len(features[0]) for features in sorted_batch],
-                                device=self.device)
+                                )
         maxlen = max(seq_lens).item()
         padded_x = torch.tensor([
             x_y[0] + [self.unk_feat_id] * (maxlen - len(x_y[0]))
             for x_y in sorted_batch
         ],
                                 dtype=torch.long,
-                                device=self.device)
+                                )
         padded_y = torch.tensor([
             x_y[2] + [self.pad_tag_id] * (maxlen - len(x_y[2])) for x_y in sorted_batch
         ],
                                 dtype=torch.long,
-                                device=self.device)
+                                )
         word2vecs = np.zeros((len(sorted_batch), sorted_batch[0][1].shape[0], sorted_batch[0][1].shape[1]))
         for i,x_y in enumerate(sorted_batch):
             if seq_lens[i] != x_y[1].shape[0]:
@@ -87,17 +87,17 @@ class CHARW2CPOSCWSFLAGDataSet(torch.utils.data.Dataset):
             x_y[4] + [self.pad_tag_id] * (maxlen - len(x_y[4])) for x_y in sorted_batch
         ],
                                 dtype=torch.long,
-                                device=self.device)
+                                )
         padded_cws = torch.tensor([
             x_y[5] + [self.pad_tag_id] * (maxlen - len(x_y[5])) for x_y in sorted_batch
         ],
                                 dtype=torch.long,
-                                device=self.device)
+                                )
         padded_flag = torch.tensor([
             x_y[6] + [self.pad_tag_id] * (maxlen - len(x_y[6])) for x_y in sorted_batch
         ],
                                 dtype=torch.long,
-                                device=self.device)
+                                )
         features_dict = {'char': padded_x, 'word2vecs': word2vecs, 'mask': mask, 'pos': padded_pos, 'cws': padded_cws, 'flag': padded_flag}
         return features_dict, padded_y, seq_lens
     

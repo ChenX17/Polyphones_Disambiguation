@@ -8,18 +8,18 @@ OPTIM:
   BASE_LR: 0.001
   LR_POLICY: steps
   STEPS: [0, 5, 10, 15]
-  LR_MULT: 0.1
+  LR_MULT: 0.5
   MAX_EPOCH: 20
   MOMENTUM: 0.9
   NESTEROV: True
-  WEIGHT_DECAY: 0.00001
+  WEIGHT_DECAY: 0.00005
 TRAIN:
-  DATASET: 'charw2vposcwsflag'
+  DATASET: 'charw2v'
   SPLIT: train
   BATCH_SIZE: 128
   IM_SIZE: 224
 TEST:
-  DATASET: 'charw2vposcwsflag'
+  DATASET: 'charw2v'
   SPLIT: test
   BATCH_SIZE: 25
   IM_SIZE: 256
@@ -28,4 +28,4 @@ DATA_LOADER:
   NUM_WORKERS: 16
 CUDNN:
   BENCHMARK: True
-OUT_DIR: 'outputs'
+OUT_DIR: 'outputs_new'
