@@ -31,7 +31,7 @@ class CHARW2VPOSNet(nn.Module):
                  hidden_dim=64,
                  pretrained_embedding=None,
                  pretrained_embedding_dim=200):
-        super(CHARW2VPOSNent, self).__init__()
+        super(CHARW2VPOSNet, self).__init__()
         self.device = device
         self.vocab_size = vocab_size
         self.tagset_size = tags_size
@@ -46,12 +46,12 @@ class CHARW2VPOSNet(nn.Module):
         else:
             self.word_embeds = nn.Embedding(vocab_size,
                                             self.embedding_dim).to(device)
-            self.pos_embeds = nn.Embedding(po[s_size,
+            self.pos_embeds = nn.Embedding(pos_size,
                                             self.embedding_dim).to(device)
             self.pretrained_embedding_dim = pretrained_embedding_dim
         # feature_dim = len(feature_to_index['pos']) + len(feature_to_index['position']) + len(feature_to_index['target'])
         self.dropout_rate = 0.0
-        self.bilstm = nn.LSTM(input_size=self.embedding_dim+self.pretrained_embedding_dim,
+        self.bilstm = nn.LSTM(input_size=2*self.embedding_dim+self.pretrained_embedding_dim,
                               hidden_size=self.hidden_dim,
                               num_layers=self.num_layers,
                               dropout=self.dropout_rate,

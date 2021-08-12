@@ -120,7 +120,9 @@ class TrainMeter(object):
             self.iter_timer.reset()
         self.loss.reset()
         self.loss_total = 0.0
+        self.acc_total = 0.0
         self.lr = None
+        self.acc = 0.0
         self.num_samples = 0
 
     def iter_tic(self):
@@ -129,7 +131,7 @@ class TrainMeter(object):
     def iter_toc(self):
         self.iter_timer.toc()
 
-    def update_stats(self, loss, lr, acc,  mb_size):
+    def update_stats(self, loss, lr, acc, mb_size):
         # Current minibatch stats
         self.loss.add_value(loss)
         self.lr = lr
@@ -172,7 +174,7 @@ class TrainMeter(object):
             "time_avg": self.iter_timer.average_time,
             "time_epoch": self.iter_timer.average_time * self.epoch_iters,
             "eta": time_string(eta_sec),
-            "loss": avg_loss,
+            "loss": self.loss.get_win_median(),
             "avg_train_acc": avg_acc,
             "lr": self.lr,
             "mem": int(np.ceil(mem_usage)),
@@ -192,13 +194,15 @@ class TestMeter(object):
         self.phase = phase
         self.iter_timer = Timer()
         self.num_samples = 0
+        self.loss_total = 0.0
+        self.acc_total = 0.0
+        self.loss = 0.0
 
     def reset(self, min_errs=False):
-        if min_errs:
-            self.min_top1_err = 100.0
-            self.min_top5_err = 100.0
         self.iter_timer.reset()
         self.num_samples = 0
+        self.loss_total = 0.0
+        self.acc_total = 0.0
 
     def iter_tic(self):
         self.iter_timer.tic()
@@ -206,11 +210,17 @@ class TestMeter(object):
     def iter_toc(self):
         self.iter_timer.toc()
 
-    def update_stats(self, top1_err, top5_err, mb_size):
+    def update_stats(self, loss, test_acc, mb_size):
+        # Current minibatch stats
+        self.loss = loss.item()
+        self.loss_total += loss.item() * mb_size
         self.num_samples += mb_size
+        self.acc = test_acc
+        self.acc_total += test_acc * mb_size
 
     def get_iter_stats(self, cur_epoch, cur_iter):
         mem_usage = gpu_mem_usage()
+
         iter_stats = {
             "epoch": "{}/{}".format(cur_epoch + 1, cfg.OPTIM.MAX_EPOCH),
             "iter": "{}/{}".format(cur_iter + 1, self.epoch_iters),
@@ -227,9 +237,13 @@ class TestMeter(object):
 
     def get_epoch_stats(self, cur_epoch):
         mem_usage = gpu_mem_usage()
+        avg_loss = self.loss_total / self.num_samples
+        avg_acc = self.acc_total / self.num_samples
         stats = {
             "epoch": "{}/{}".format(cur_epoch + 1, cfg.OPTIM.MAX_EPOCH),
             "time_avg": self.iter_timer.average_time,
+            "loss": avg_loss,
+            "avg_test_acc": avg_acc,
             "time_epoch": self.iter_timer.average_time * self.epoch_iters,
             "mem": int(np.ceil(mem_usage)),
         }

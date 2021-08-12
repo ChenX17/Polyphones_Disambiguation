@@ -25,9 +25,9 @@ class CHARW2VNet(nn.Module):
                  device='cuda:0',
                  vocab_size=4941,
                  tags_size=204,
-                 embedding_dim=128,
+                 embedding_dim=64,
                  num_layers=1,
-                 hidden_dim=128,
+                 hidden_dim=64,
                  pretrained_embedding=None,
                  pretrained_embedding_dim=200):
         super(CHARW2VNet, self).__init__()
@@ -46,8 +46,7 @@ class CHARW2VNet(nn.Module):
             self.word_embeds = nn.Embedding(vocab_size,
                                             self.embedding_dim).to(device)
             self.pretrained_embedding_dim = pretrained_embedding_dim
-        # feature_dim = len(feature_to_index['pos']) + len(feature_to_index['position']) + len(feature_to_index['target'])
-        self.dropout_rate = 0.1
+        self.dropout_rate = 0.0
         self.bilstm = nn.LSTM(input_size=self.embedding_dim+self.pretrained_embedding_dim,
                               hidden_size=self.hidden_dim,
                               num_layers=self.num_layers,
@@ -58,10 +57,10 @@ class CHARW2VNet(nn.Module):
         self.layernorm = nn.LayerNorm([self.embedding_dim]).to(device)                      
         self.dropout = nn.Dropout(0.5)
         self.linear = nn.Linear(self.hidden_dim * 2,
-                                    self.hidden_dim * 2).to(device)
+                                    self.hidden_dim * 4).to(device)
         self.activation = nn.ReLU()
         # Maps the output of BiLSTM into tag space.
-        self.hidden2tag = nn.Linear(self.hidden_dim * 2,
+        self.hidden2tag = nn.Linear(self.hidden_dim * 4,
                                     self.tagset_size).to(device)
 
     
@@ -105,7 +104,7 @@ class CHARW2VNet(nn.Module):
         # blstm
         y, _ = self.bilstm(packed_input, (h0, c0))
         y, batch_sizes = y.data, y.batch_sizes
-        y = self.dropout(y)
+        #y = self.dropout(y)
 
         # linear
         y = self.linear(y)

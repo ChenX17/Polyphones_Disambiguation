@@ -134,6 +134,7 @@ def test_epoch(loader, model, meter, cur_epoch, loss_fun):
     total_poly = 0
     total_correct_poly = 0
     rec = 0.0
+    total_loss = 0.0
     for cur_iter, (inputs, labels, seq_lens) in enumerate(loader):
         # Transfer the data to the current GPU device
         for key in inputs.keys():
@@ -150,9 +151,14 @@ def test_epoch(loader, model, meter, cur_epoch, loss_fun):
                 batch_size, max_seq_len) < seq_lens.unsqueeze(1)).cuda()
         
         accuracy, poly, correct_poly = acc(mask, labels, preds)
+        meter.update_stats(loss, accuracy, batch_size)
         total_poly += poly
         total_correct_poly += correct_poly
-    print('acc: ', float(total_correct_poly)/float(total_poly))
+        total_loss += loss.item()
+
+        mb_size = inputs['mask'].size(0) * cfg.NUM_GPUS
+    meter.log_epoch_stats(cur_epoch)
+    #print('acc: ', float(total_correct_poly)/float(total_poly), 'loss: ', total_loss*batch_size/len(loader))
     return float(total_correct_poly)/float(total_poly)
 
 
