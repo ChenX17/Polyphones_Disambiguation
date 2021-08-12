@@ -28,8 +28,8 @@ from polyphonesdis.core.io import pathmgr
 from polyphonesdis.core.meters import acc
 from tensorboardX import SummaryWriter
 
-writer = SummaryWriter(cfg.OUT_DIR)
-
+# writer = SummaryWriter(cfg.OUT_DIR)
+import pdb;pdb.set_trace()
 logger = logging.get_logger(__name__)
 
 
@@ -40,6 +40,9 @@ def setup_env():
         pathmgr.mkdirs(cfg.OUT_DIR)
         # Save the config
         config.dump_cfg()
+        # Set the writer
+        # writer = SummaryWriter(cfg.OUT_DIR)
+
     # Setup logging
     logging.setup_logging()
     # Log torch, cuda, and cudnn versions
@@ -82,7 +85,8 @@ def comp_loss(preds, labels, seq_lens, loss_fun):
     loss = (loss * mask.float()).sum()/mask.sum().item()
     return loss
 
-def train_epoch(loader, model, ema, loss_fun, optimizer, meter, cur_epoch):
+
+def train_epoch(loader, model, ema, loss_fun, optimizer, meter, cur_epoch, writer):
     """Performs one epoch of training."""
     # Shuffle the data
     data_loader.shuffle(loader, cur_epoch)
@@ -136,7 +140,7 @@ def train_epoch(loader, model, ema, loss_fun, optimizer, meter, cur_epoch):
 
 
 @torch.no_grad()
-def test_epoch(loader, model, meter, cur_epoch, loss_fun):
+def test_epoch(loader, model, meter, cur_epoch, loss_fun, writer=None):
     """Evaluates the model on the test set."""
     # Enable eval mode
     model.eval()
@@ -167,9 +171,9 @@ def test_epoch(loader, model, meter, cur_epoch, loss_fun):
         total_poly += poly
         total_correct_poly += correct_poly
         total_loss += loss.item()
-
-    writer.add_scalar('val_acc', float(total_correct_poly)/float(total_poly), cur_epoch)
-    writer.add_scalar('val_loss', total_loss/len(loader), cur_epoch)
+    if writer:
+        writer.add_scalar('val_acc', float(total_correct_poly)/float(total_poly), cur_epoch)
+        writer.add_scalar('val_loss', total_loss/len(loader), cur_epoch)
 
     meter.log_epoch_stats(cur_epoch)
     #print('acc: ', float(total_correct_poly)/float(total_poly), 'loss: ', total_loss*batch_size/len(loader))
@@ -180,6 +184,7 @@ def train_model():
     """Trains the model."""
     # Setup training/testing environment
     setup_env()
+    writer = SummaryWriter(cfg.OUT_DIR)
     # Construct the model, ema, loss_fun, and optimizer
     model = setup_model()
     ema = deepcopy(model)
@@ -206,7 +211,7 @@ def train_model():
     for cur_epoch in range(start_epoch, cfg.OPTIM.MAX_EPOCH):
         # Train for one epoch
         params = (train_loader, model, ema, loss_fun, optimizer, train_meter)
-        train_epoch(*params, cur_epoch)
+        train_epoch(*params, cur_epoch, writer)
         '''
         # Compute precise BN stats
         if cfg.BN.USE_PRECISE_STATS:
@@ -214,7 +219,7 @@ def train_model():
             net.compute_precise_bn_stats(ema, train_loader)
         '''
         # Evaluate the model
-        test_acc = test_epoch(test_loader, model, test_meter, cur_epoch, loss_fun)
+        test_acc = test_epoch(test_loader, model, test_meter, cur_epoch, loss_fun, writer)
         # Save a checkpoint
         file = cp.save_checkpoint(model, ema, optimizer, cur_epoch, test_acc)
         logger.info("Wrote checkpoint to: {}".format(file))
@@ -234,7 +239,7 @@ def test_model():
     test_loader = data_loader.construct_test_loader()
     test_meter = meters.TestMeter(len(test_loader))
     # Evaluate the model
-    test_epoch(test_loader, model, test_meter, 0)
+    test_epoch(test_loader, model, test_meter, 0, writer=None)
 
 
 def time_model():
