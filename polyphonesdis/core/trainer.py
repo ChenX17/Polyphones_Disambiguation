@@ -26,7 +26,9 @@ import torch
 from polyphonesdis.core.config import cfg
 from polyphonesdis.core.io import pathmgr
 from polyphonesdis.core.meters import acc
+from tensorboardX import SummaryWriter
 
+writer = SummaryWriter(cfg.OUT_DIR)
 
 logger = logging.get_logger(__name__)
 
@@ -92,6 +94,9 @@ def train_epoch(loader, model, ema, loss_fun, optimizer, meter, cur_epoch):
     ema.train()
     meter.reset()
     meter.iter_tic()
+    total_poly = 0
+    total_correct_poly = 0
+    total_loss = 0.0
     for cur_iter, (inputs, labels, seq_lens) in enumerate(loader):
         # Transfer the data to the current GPU device
         for key in inputs.keys():
@@ -108,9 +113,16 @@ def train_epoch(loader, model, ema, loss_fun, optimizer, meter, cur_epoch):
         batch_size, max_seq_len = inputs['char'].size()
         mask = (torch.arange(max_seq_len).expand(
                 batch_size, max_seq_len) < seq_lens.unsqueeze(1)).cuda()
-        accuracy, _, _ = acc(mask, labels, preds)
+        accuracy, poly, correct_poly = acc(mask, labels, preds)
+        total_poly += poly
+        total_correct_poly += correct_poly
+        total_loss += loss.item() 
 
         loss  = dist.scaled_all_reduce([loss])[0]
+        total_acc = float(total_correct_poly)/float(total_poly)
+        if (cur_iter+(cur_epoch-1)*len(loader)) % 500 == 0:
+            writer.add_scalar('train_acc', total_acc, cur_iter+(cur_epoch-1)*len(loader))
+            writer.add_scalar('train_loss', total_loss/cur_iter, cur_iter+(cur_epoch-1)*len(loader))
         # Copy the stats from GPU to CPU (sync point)
         loss = loss.item()
         meter.iter_toc()
@@ -156,7 +168,9 @@ def test_epoch(loader, model, meter, cur_epoch, loss_fun):
         total_correct_poly += correct_poly
         total_loss += loss.item()
 
-        mb_size = inputs['mask'].size(0) * cfg.NUM_GPUS
+    writer.add_scalar('val_acc', float(total_correct_poly)/float(total_poly), cur_epoch)
+    writer.add_scalar('val_loss', total_loss/len(loader), cur_epoch)
+
     meter.log_epoch_stats(cur_epoch)
     #print('acc: ', float(total_correct_poly)/float(total_poly), 'loss: ', total_loss*batch_size/len(loader))
     return float(total_correct_poly)/float(total_poly)
@@ -204,6 +218,7 @@ def train_model():
         # Save a checkpoint
         file = cp.save_checkpoint(model, ema, optimizer, cur_epoch, test_acc)
         logger.info("Wrote checkpoint to: {}".format(file))
+    writer.close()
 
 
 def test_model():
