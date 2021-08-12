@@ -1,5 +1,5 @@
 MODEL:
-  TYPE: charw2cpos
+  TYPE: charw2ccws
   DEPTH: 1
   NUM_CLASSES: 2
 BN:

@@ -6,7 +6,7 @@ from torch.nn.utils.rnn import PackedSequence, pack_padded_sequence, pad_packed_
 import math
 
 
-class CHARW2VNet(nn.Module):
+class CHARW2VCWSNet(nn.Module):
     """The BiLSTM model for sequence tagging.
 
     Attributes:
@@ -25,12 +25,13 @@ class CHARW2VNet(nn.Module):
                  device='cuda:0',
                  vocab_size=4941,
                  tags_size=204,
+                 pos_size=29,
                  embedding_dim=64,
                  num_layers=1,
                  hidden_dim=64,
                  pretrained_embedding=None,
                  pretrained_embedding_dim=200):
-        super(CHARW2VNet, self).__init__()
+        super(CHARW2VCWSNet, self).__init__()
         self.device = device
         self.vocab_size = vocab_size
         self.tagset_size = tags_size
@@ -45,9 +46,12 @@ class CHARW2VNet(nn.Module):
         else:
             self.word_embeds = nn.Embedding(vocab_size,
                                             self.embedding_dim).to(device)
+            self.pos_embeds = nn.Embedding(pos_size,
+                                            self.embedding_dim).to(device)
             self.pretrained_embedding_dim = pretrained_embedding_dim
+        # feature_dim = len(feature_to_index['pos']) + len(feature_to_index['position']) + len(feature_to_index['target'])
         self.dropout_rate = 0.0
-        self.bilstm = nn.LSTM(input_size=self.embedding_dim+self.pretrained_embedding_dim,
+        self.bilstm = nn.LSTM(input_size=2*self.embedding_dim+self.pretrained_embedding_dim,
                               hidden_size=self.hidden_dim,
                               num_layers=self.num_layers,
                               dropout=self.dropout_rate,
@@ -85,7 +89,11 @@ class CHARW2VNet(nn.Module):
 
         input_features = self.word_embeds(inputs['char'])
         input_features = self.dropout(self.layernorm(input_features))
-        input_features = torch.cat((input_features,embedding_inputs.float()), 2)
+
+        cws_features = self.pos_embeds(inputs['cws'])
+        cws_features = self.dropout(self.layernorm(pos_features))
+
+        input_features = torch.cat((input_features, embedding_inputs.float(), pos_features), 2)
 
 
         packed_input = pack_padded_sequence(input_features,

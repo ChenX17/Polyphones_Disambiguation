@@ -11,6 +11,7 @@ from polyphonesdis.core.config import cfg
 from polyphonesdis.core.net import SoftCrossEntropyLoss
 from polyphonesdis.models.char_word2vec import CHARW2VNet
 from polyphonesdis.models.char_word2vec_pos import CHARW2VPOSNet
+from polyphonesdis.models.char_word2vec_cws import CHARW2VCWSNet
 
 from torch.nn import MSELoss
 from torch.nn import BCELoss
@@ -18,7 +19,7 @@ from torch.nn import CrossEntropyLoss
 
 
 # Supported models
-_models = {"charw2c": CHARW2VNet, "charw2cpos": CHARW2VPOSNet}
+_models = {"charw2c": CHARW2VNet, "charw2cpos": CHARW2VPOSNet, "charw2ccws": CHARW2VCWSNet}
 
 # Supported loss functions
 _loss_funs = {

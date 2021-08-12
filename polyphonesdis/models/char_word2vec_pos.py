@@ -59,12 +59,12 @@ class CHARW2VPOSNet(nn.Module):
                               batch_first=True).to(device)
 
         self.layernorm = nn.LayerNorm([self.embedding_dim]).to(device)                      
-        self.dropout = nn.Dropout(0.5)
+        self.dropout = nn.Dropout(0.3)
         self.linear = nn.Linear(self.hidden_dim * 2,
-                                    self.hidden_dim * 2).to(device)
+                                    self.hidden_dim * 4).to(device)
         self.activation = nn.ReLU()
         # Maps the output of BiLSTM into tag space.
-        self.hidden2tag = nn.Linear(self.hidden_dim * 2,
+        self.hidden2tag = nn.Linear(self.hidden_dim * 4,
                                     self.tagset_size).to(device)
 
     
@@ -90,8 +90,8 @@ class CHARW2VPOSNet(nn.Module):
         input_features = self.word_embeds(inputs['char'])
         input_features = self.dropout(self.layernorm(input_features))
 
-        pos_features = self.ppos_embeds(inputs['pos'])
-        pos_features = self.dropout(self.layernorm(pos_features))
+        pos_features = self.pos_embeds(inputs['pos'])
+        #pos_features = self.dropout(self.layernorm(pos_features))
 
         input_features = torch.cat((input_features, embedding_inputs.float(), pos_features), 2)
 
