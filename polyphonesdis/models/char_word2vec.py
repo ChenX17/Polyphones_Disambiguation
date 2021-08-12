@@ -55,7 +55,7 @@ class CHARW2VNet(nn.Module):
                               batch_first=True).to(device)
 
         self.layernorm = nn.LayerNorm([self.embedding_dim]).to(device)                      
-        self.dropout = nn.Dropout(0.5)
+        self.dropout = nn.Dropout(0.3)
         self.linear = nn.Linear(self.hidden_dim * 2,
                                     self.hidden_dim * 4).to(device)
         self.activation = nn.ReLU()
@@ -104,7 +104,7 @@ class CHARW2VNet(nn.Module):
         # blstm
         y, _ = self.bilstm(packed_input, (h0, c0))
         y, batch_sizes = y.data, y.batch_sizes
-        #y = self.dropout(y)
+        y = self.dropout(y)
 
         # linear
         y = self.linear(y)
