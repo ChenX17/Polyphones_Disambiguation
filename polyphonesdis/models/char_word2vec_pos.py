@@ -91,7 +91,7 @@ class CHARW2VPOSNet(nn.Module):
         input_features = self.dropout(self.layernorm(input_features))
 
         pos_features = self.pos_embeds(inputs['pos'])
-        #pos_features = self.dropout(self.layernorm(pos_features))
+        pos_features = self.dropout(self.layernorm(pos_features))
 
         input_features = torch.cat((input_features, embedding_inputs.float(), pos_features), 2)
 

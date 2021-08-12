@@ -28,4 +28,4 @@ DATA_LOADER:
   NUM_WORKERS: 16
 CUDNN:
   BENCHMARK: True
-OUT_DIR: 'outputs_charw2cpos'
+OUT_DIR: 'outputs_charw2ccws'

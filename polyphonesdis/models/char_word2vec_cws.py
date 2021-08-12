@@ -25,7 +25,7 @@ class CHARW2VCWSNet(nn.Module):
                  device='cuda:0',
                  vocab_size=4941,
                  tags_size=204,
-                 pos_size=29,
+                 cws_size=5,
                  embedding_dim=64,
                  num_layers=1,
                  hidden_dim=64,
@@ -46,7 +46,7 @@ class CHARW2VCWSNet(nn.Module):
         else:
             self.word_embeds = nn.Embedding(vocab_size,
                                             self.embedding_dim).to(device)
-            self.pos_embeds = nn.Embedding(pos_size,
+            self.cws_embeds = nn.Embedding(cws_size,
                                             self.embedding_dim).to(device)
             self.pretrained_embedding_dim = pretrained_embedding_dim
         # feature_dim = len(feature_to_index['pos']) + len(feature_to_index['position']) + len(feature_to_index['target'])
@@ -90,10 +90,10 @@ class CHARW2VCWSNet(nn.Module):
         input_features = self.word_embeds(inputs['char'])
         input_features = self.dropout(self.layernorm(input_features))
 
-        cws_features = self.pos_embeds(inputs['cws'])
-        cws_features = self.dropout(self.layernorm(pos_features))
+        cws_features = self.cws_embeds(inputs['cws'])
+        cws_features = self.dropout(self.layernorm(cws_features))
 
-        input_features = torch.cat((input_features, embedding_inputs.float(), pos_features), 2)
+        input_features = torch.cat((input_features, embedding_inputs.float(), cws_features), 2)
 
 
         packed_input = pack_padded_sequence(input_features,

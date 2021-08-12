@@ -122,7 +122,7 @@ def train_epoch(loader, model, ema, loss_fun, optimizer, meter, cur_epoch):
         total_acc = float(total_correct_poly)/float(total_poly)
         if (cur_iter+(cur_epoch-1)*len(loader)) % 500 == 0:
             writer.add_scalar('train_acc', total_acc, cur_iter+(cur_epoch-1)*len(loader))
-            writer.add_scalar('train_loss', total_loss/cur_iter, cur_iter+(cur_epoch-1)*len(loader))
+            writer.add_scalar('train_loss', total_loss/500, cur_iter+(cur_epoch-1)*len(loader))
         # Copy the stats from GPU to CPU (sync point)
         loss = loss.item()
         meter.iter_toc()
