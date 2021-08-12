@@ -14,3 +14,4 @@ preprocess/ripe_word2vec_7w
 outputs_decay0.5/
 outputs_charw2cpos/
 outputs_charw2ccws/
+outputs_charw2cflag/
