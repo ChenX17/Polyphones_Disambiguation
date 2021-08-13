@@ -16,6 +16,7 @@ from yacs.config import CfgNode
 # Global config object (example usage: from core.config import cfg)
 _C = CfgNode()
 cfg = _C
+_C.DEVICE = 'cpu'
 
 
 # ---------------------------------- Model options ----------------------------------- #
