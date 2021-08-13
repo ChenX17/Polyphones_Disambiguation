@@ -36,7 +36,7 @@ class CHARW2VCWSNet(nn.Module):
                                         self.embedding_dim).to(self.device)
         self.cws_embeds = nn.Embedding(self.cws_size,
                                         self.embedding_dim).to(self.device)
-        self.dropout_rate = cfg.DROPOUT_INTER_BLSTM
+        self.dropout_rate = cfg.MODEL.DROPOUT_INTER_BLSTM
 
         self.bilstm = nn.LSTM(input_size=2*self.embedding_dim+self.pretrained_embedding_dim,
                               hidden_size=self.hidden_dim,
