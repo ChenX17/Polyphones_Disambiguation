@@ -56,6 +56,7 @@ class CHARW2VNet(nn.Module):
 
         self.layernorm = nn.LayerNorm([self.embedding_dim]).to(device)                      
         self.dropout = nn.Dropout(0.3)
+        self.dropout_linear = nn.Dropout(0.1)
         self.linear = nn.Linear(self.hidden_dim * 2,
                                     self.hidden_dim * 4).to(device)
         self.activation = nn.ReLU()
@@ -109,7 +110,7 @@ class CHARW2VNet(nn.Module):
         # linear
         y = self.linear(y)
         y = self.activation(y)
-        y = self.dropout(y)
+        y = self.dropout_linear(y)
 
         # classifier
         y = self.hidden2tag(y)

@@ -66,7 +66,7 @@ def get_logger(name):
     return logging.getLogger(name)
 
 
-def dump_log_data(data, data_type, prec=4):
+def dump_log_data(data, data_type, prec=6):
     """Covert data (a dictionary) into tagged json string for logging."""
     data[_TYPE] = data_type
     data = float_to_decimal(data, prec)
