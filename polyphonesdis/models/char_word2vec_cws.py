@@ -21,60 +21,39 @@ class CHARW2VCWSNet(nn.Module):
 
     """
 
-    def __init__(self,
-                 device='cuda:0',
-                 vocab_size=4941,
-                 tags_size=204,
-                 cws_size=5,
-                 embedding_dim=64,
-                 num_layers=1,
-                 hidden_dim=64,
-                 pretrained_embedding=None,
-                 pretrained_embedding_dim=200):
+    def __init__(self, cfg):
         super(CHARW2VCWSNet, self).__init__()
-        self.device = device
-        self.vocab_size = vocab_size
-        self.tagset_size = tags_size
-        self.embedding_dim = embedding_dim
-        self.num_layers = num_layers
-        self.hidden_dim = hidden_dim
-        self.pretrained_embedding = pretrained_embedding
+        self.device = cfg.DEVICE
+        self.vocab_size = cfg.VOCAB_SIZE
+        self.tagset_size = cfg.TAGS_SIZE
+        self.embedding_dim = cfg.EMBEDDING_DIM
+        self.num_layers = cfg.NUM_LAYERS
+        self.hidden_dim = cfg.HIDDEN_DIM
+        self.pretrained_embedding_dim = cfg.PRETRAINED_EMBEDDING_DIM
 
-        if pretrained_embedding:
-            self.word_embeds = pretrained_embedding
-            self.pretrained_embedding_dim = pretrained_embedding_dim
-        else:
-            self.word_embeds = nn.Embedding(vocab_size,
-                                            self.embedding_dim).to(device)
-            self.cws_embeds = nn.Embedding(cws_size,
-                                            self.embedding_dim).to(device)
-            self.pretrained_embedding_dim = pretrained_embedding_dim
-        # feature_dim = len(feature_to_index['pos']) + len(feature_to_index['position']) + len(feature_to_index['target'])
-        self.dropout_rate = 0.0
+        self.word_embeds = nn.Embedding(self.vocab_size,
+                                        self.embedding_dim).to(self.device)
+        self.cws_embeds = nn.Embedding(cws_size,
+                                        self.embedding_dim).to(self.device)
+        self.dropout_rate = cfg.DROPOUT_INTER_BLSTM
+        
         self.bilstm = nn.LSTM(input_size=2*self.embedding_dim+self.pretrained_embedding_dim,
                               hidden_size=self.hidden_dim,
                               num_layers=self.num_layers,
                               dropout=self.dropout_rate,
                               bidirectional=True,
-                              batch_first=True).to(device)
+                              batch_first=True).to(self.device)
 
-        self.layernorm = nn.LayerNorm([self.embedding_dim]).to(device)                      
-        self.dropout = nn.Dropout(0.3)
+        self.layernorm = nn.LayerNorm([self.embedding_dim]).to(self.device)                      
+        self.dropout_embedding = nn.Dropout(cfg.DROPOUT_EMBEDDING)
+        self.dropout_blstm = nn.Dropout(cfg.DROPOUT_BLSTM)
+        self.dropout_linear = nn.Dropout(cfg.DROPOUT_LINEAR)
         self.linear = nn.Linear(self.hidden_dim * 2,
-                                    self.hidden_dim * 4).to(device)
+                                    self.hidden_dim * 4).to(self.device)
         self.activation = nn.ReLU()
         # Maps the output of BiLSTM into tag space.
         self.hidden2tag = nn.Linear(self.hidden_dim * 4,
-                                    self.tagset_size).to(device)
-
-    
-    def ce_loss(self, input_features, tags, seq_lens):
-        celoss = nn.CrossEntropyLoss(reduction='none')
-        loss = celoss(input_features.transpose(1, 2), tags)
-        mask = tags > 1
-        loss = (loss * mask.float()).sum()/mask.sum().item()
-
-        return loss
+                                    self.tagset_size).to(self.device)
     
     def forward(self, inputs, target, seq_lens):
         """Returns the bilstm output features given the input sentence.
@@ -88,10 +67,10 @@ class CHARW2VCWSNet(nn.Module):
         batch_size = embedding_inputs.shape[0]
 
         input_features = self.word_embeds(inputs['char'])
-        input_features = self.dropout(self.layernorm(input_features))
+        input_features = self.dropout_embedding(self.layernorm(input_features))
 
         cws_features = self.cws_embeds(inputs['cws'])
-        cws_features = self.dropout(self.layernorm(cws_features))
+        cws_features = self.dropout_embedding(self.layernorm(cws_features))
 
         input_features = torch.cat((input_features, embedding_inputs.float(), cws_features), 2)
 
@@ -112,12 +91,12 @@ class CHARW2VCWSNet(nn.Module):
         # blstm
         y, _ = self.bilstm(packed_input, (h0, c0))
         y, batch_sizes = y.data, y.batch_sizes
-        y = self.dropout(y)
+        y = self.dropout_blstm(y)
 
         # linear
         y = self.linear(y)
         y = self.activation(y)
-        y = self.dropout(y)
+        y = self.dropout_linear(y)
 
         # classifier
         y = self.hidden2tag(y)

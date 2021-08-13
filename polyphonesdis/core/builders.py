@@ -51,7 +51,7 @@ def get_loss_fun(loss=None):
 
 def build_model():
     """Builds the model."""
-    return get_model()()
+    return get_model()(cfg)
 
 
 def build_loss_fun(loss=None, reduction='mean'):
