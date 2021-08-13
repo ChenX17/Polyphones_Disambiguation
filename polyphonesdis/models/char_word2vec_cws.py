@@ -24,19 +24,19 @@ class CHARW2VCWSNet(nn.Module):
     def __init__(self, cfg):
         super(CHARW2VCWSNet, self).__init__()
         self.device = cfg.DEVICE
-        self.vocab_size = cfg.VOCAB_SIZE
-        self.tagset_size = cfg.TAGS_SIZE
-        self.embedding_dim = cfg.EMBEDDING_DIM
-        self.num_layers = cfg.NUM_LAYERS
-        self.hidden_dim = cfg.HIDDEN_DIM
-        self.pretrained_embedding_dim = cfg.PRETRAINED_EMBEDDING_DIM
+        self.vocab_size = cfg.MODEL.VOCAB_SIZE
+        self.tagset_size = cfg.MODEL.TAGS_SIZE
+        self.embedding_dim = cfg.MODEL.EMBEDDING_DIM
+        self.num_layers = cfg.MODEL.NUM_LAYERS
+        self.hidden_dim = cfg.MODEL.HIDDEN_DIM
+        self.pretrained_embedding_dim = cfg.MODEL.PRETRAINED_EMBEDDING_DIM
 
         self.word_embeds = nn.Embedding(self.vocab_size,
                                         self.embedding_dim).to(self.device)
         self.cws_embeds = nn.Embedding(cws_size,
                                         self.embedding_dim).to(self.device)
         self.dropout_rate = cfg.DROPOUT_INTER_BLSTM
-        
+
         self.bilstm = nn.LSTM(input_size=2*self.embedding_dim+self.pretrained_embedding_dim,
                               hidden_size=self.hidden_dim,
                               num_layers=self.num_layers,
@@ -45,9 +45,9 @@ class CHARW2VCWSNet(nn.Module):
                               batch_first=True).to(self.device)
 
         self.layernorm = nn.LayerNorm([self.embedding_dim]).to(self.device)                      
-        self.dropout_embedding = nn.Dropout(cfg.DROPOUT_EMBEDDING)
-        self.dropout_blstm = nn.Dropout(cfg.DROPOUT_BLSTM)
-        self.dropout_linear = nn.Dropout(cfg.DROPOUT_LINEAR)
+        self.dropout_embedding = nn.Dropout(cfg.MODEL.DROPOUT_EMBEDDING)
+        self.dropout_blstm = nn.Dropout(cfg.MODEL.DROPOUT_BLSTM)
+        self.dropout_linear = nn.Dropout(cfg.MODEL.DROPOUT_LINEAR)
         self.linear = nn.Linear(self.hidden_dim * 2,
                                     self.hidden_dim * 4).to(self.device)
         self.activation = nn.ReLU()
