@@ -29,6 +29,7 @@ class CHARW2VCWSNet(nn.Module):
         self.embedding_dim = cfg.MODEL.EMBEDDING_DIM
         self.num_layers = cfg.MODEL.NUM_LAYER
         self.hidden_dim = cfg.MODEL.HIDDEN_DIM
+        self.cws_size = cfg.MODEL.CWS_SIZE
         self.pretrained_embedding_dim = cfg.MODEL.PRETRAINED_EMBEDDING_DIM
 
         self.word_embeds = nn.Embedding(self.vocab_size,
