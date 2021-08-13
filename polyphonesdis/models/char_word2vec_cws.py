@@ -27,13 +27,13 @@ class CHARW2VCWSNet(nn.Module):
         self.vocab_size = cfg.MODEL.VOCAB_SIZE
         self.tagset_size = cfg.MODEL.TAGS_SIZE
         self.embedding_dim = cfg.MODEL.EMBEDDING_DIM
-        self.num_layers = cfg.MODEL.NUM_LAYERS
+        self.num_layers = cfg.MODEL.NUM_LAYER
         self.hidden_dim = cfg.MODEL.HIDDEN_DIM
         self.pretrained_embedding_dim = cfg.MODEL.PRETRAINED_EMBEDDING_DIM
 
         self.word_embeds = nn.Embedding(self.vocab_size,
                                         self.embedding_dim).to(self.device)
-        self.cws_embeds = nn.Embedding(cws_size,
+        self.cws_embeds = nn.Embedding(self.cws_size,
                                         self.embedding_dim).to(self.device)
         self.dropout_rate = cfg.DROPOUT_INTER_BLSTM
 
