@@ -36,9 +36,9 @@ class CHARW2VCWSPOSNet(nn.Module):
         self.word_embeds = nn.Embedding(self.vocab_size,
                                             self.embedding_dim).to(self.device)
 
-        self.cws_embeds = nn.Embedding(cws_size,
+        self.cws_embeds = nn.Embedding(self.cws_size,
                                             self.embedding_dim).to(self.device)
-        self.pos_embeds = nn.Embedding(pos_size,
+        self.pos_embeds = nn.Embedding(self.pos_size,
                                             self.embedding_dim).to(self.device)
         
         self.dropout_rate = 0.0

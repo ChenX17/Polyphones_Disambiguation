@@ -35,7 +35,7 @@ class CHARW2VPOSNet(nn.Module):
         self.pretrained_embedding_dim = cfg.MODEL.PRETRAINED_EMBEDDING_DIM
         self.word_embeds = nn.Embedding(self.vocab_size,
                                             self.embedding_dim).to(self.device)
-        self.pos_embeds = nn.Embedding(pos_size,
+        self.pos_embeds = nn.Embedding(self.pos_size,
                                             self.embedding_dim).to(self.device)
         
         self.dropout_rate = 0.0
