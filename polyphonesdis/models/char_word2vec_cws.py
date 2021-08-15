@@ -45,7 +45,8 @@ class CHARW2VCWSNet(nn.Module):
                               bidirectional=True,
                               batch_first=True).to(self.device)
 
-        self.layernorm = nn.LayerNorm([self.embedding_dim]).to(self.device)                      
+        self.layernorm = nn.LayerNorm([self.embedding_dim]).to(self.device)
+        self.layernorm_2 = nn.LayerNorm([2*self.hidden_dim]).to(self.device)                      
         self.dropout_embedding = nn.Dropout(cfg.MODEL.DROPOUT_EMBEDDING)
         self.dropout_blstm = nn.Dropout(cfg.MODEL.DROPOUT_BLSTM)
         self.dropout_linear = nn.Dropout(cfg.MODEL.DROPOUT_LINEAR)
@@ -92,6 +93,7 @@ class CHARW2VCWSNet(nn.Module):
         # blstm
         y, _ = self.bilstm(packed_input, (h0, c0))
         y, batch_sizes = y.data, y.batch_sizes
+        y = self.layernorm_2(y)
         y = self.dropout_blstm(y)
 
         # linear
