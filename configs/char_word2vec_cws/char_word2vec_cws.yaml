@@ -23,11 +23,11 @@ OPTIM:
   BASE_LR: 0.001
   LR_POLICY: steps
   STEPS: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
-  LR_MULT: 0.75
+  LR_MULT: 0.70
   MAX_EPOCH: 20
   MOMENTUM: 0.9
   NESTEROV: True
-  WEIGHT_DECAY: 0.00002
+  WEIGHT_DECAY: 0.00001
 TRAIN:
   DATASET: 'charw2vposcwsflag'
   SPLIT: train
