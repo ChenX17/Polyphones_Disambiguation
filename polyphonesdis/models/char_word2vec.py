@@ -22,57 +22,36 @@ class CHARW2VNet(nn.Module):
     """
 
     def __init__(self,
-                 device='cuda:0',
-                 vocab_size=4941,
-                 tags_size=204,
-                 embedding_dim=64,
-                 num_layers=1,
-                 hidden_dim=64,
-                 pretrained_embedding=None,
-                 pretrained_embedding_dim=200):
+                 cfg):
         super(CHARW2VNet, self).__init__()
-        self.device = device
-        self.vocab_size = vocab_size
-        self.tagset_size = tags_size
-        self.embedding_dim = embedding_dim
-        self.num_layers = num_layers
-        self.hidden_dim = hidden_dim
-        self.pretrained_embedding = pretrained_embedding
-
-        if pretrained_embedding:
-            self.word_embeds = pretrained_embedding
-            self.pretrained_embedding_dim = pretrained_embedding_dim
-        else:
-            self.word_embeds = nn.Embedding(vocab_size,
-                                            self.embedding_dim).to(device)
-            self.pretrained_embedding_dim = pretrained_embedding_dim
-        self.dropout_rate = 0.0
+        self.device = cfg.DEVICE
+        self.vocab_size = cfg.MODEL.VOCAB_SIZE
+        self.tagset_size = cfg.MODEL.TAGS_SIZE
+        self.embedding_dim = cfg.MODEL.EMBEDDING_DIM
+        self.num_layers = cfg.MODEL.NUM_LAYER
+        self.hidden_dim = cfg.MODEL.HIDDEN_DIM
+        self.pretrained_embedding_dim = cfg.MODEL.PRETRAINED_EMBEDDING_DIM
+        self.word_embeds = nn.Embedding(self.vocab_size,
+                                            self.embedding_dim).to(self.device)
         self.bilstm = nn.LSTM(input_size=self.embedding_dim+self.pretrained_embedding_dim,
                               hidden_size=self.hidden_dim,
                               num_layers=self.num_layers,
                               dropout=self.dropout_rate,
                               bidirectional=True,
-                              batch_first=True).to(device)
+                              batch_first=True).to(self.device)
 
-        self.layernorm = nn.LayerNorm([self.embedding_dim]).to(device)
-        self.layernorm_2 = nn.LayerNorm([self.hidden_dim*2]).to(device)                      
-        self.dropout = nn.Dropout(0.3)
-        self.dropout_linear = nn.Dropout(0.1)
+        self.layernorm = nn.LayerNorm([self.embedding_dim]).to(self.device)
+        self.layernorm_2 = nn.LayerNorm([self.hidden_dim*2]).to(self.device)                      
+        self.dropout_embedding = nn.Dropout(cfg.MODEL.DROPOUT_EMBEDDING)
+        self.dropout_blstm = nn.Dropout(cfg.MODEL.DROPOUT_BLSTM)
+        self.dropout_linear = nn.Dropout(cfg.MODEL.DROPOUT_LINEAR)
         self.linear = nn.Linear(self.hidden_dim * 2,
-                                    self.hidden_dim * 4).to(device)
+                                    self.hidden_dim * 4).to(self.device)
         self.activation = nn.ReLU()
         # Maps the output of BiLSTM into tag space.
         self.hidden2tag = nn.Linear(self.hidden_dim * 4,
-                                    self.tagset_size).to(device)
+                                    self.tagset_size).to(self.device)
 
-    
-    def ce_loss(self, input_features, tags, seq_lens):
-        celoss = nn.CrossEntropyLoss(reduction='none')
-        loss = celoss(input_features.transpose(1, 2), tags)
-        mask = tags > 1
-        loss = (loss * mask.float()).sum()/mask.sum().item()
-
-        return loss
     
     def forward(self, inputs, target, seq_lens):
         """Returns the bilstm output features given the input sentence.
@@ -86,7 +65,7 @@ class CHARW2VNet(nn.Module):
         batch_size = embedding_inputs.shape[0]
 
         input_features = self.word_embeds(inputs['char'])
-        input_features = self.dropout(self.layernorm(input_features))
+        input_features = self.dropout_embedding(self.layernorm(input_features))
         input_features = torch.cat((input_features,embedding_inputs.float()), 2)
 
 
@@ -107,7 +86,7 @@ class CHARW2VNet(nn.Module):
         y, _ = self.bilstm(packed_input, (h0, c0))
         y, batch_sizes = y.data, y.batch_sizes
         y = self.layernorm_2(y)
-        y = self.dropout(y)
+        y = self.dropout_blstm(y)
 
         # linear
         y = self.linear(y)
