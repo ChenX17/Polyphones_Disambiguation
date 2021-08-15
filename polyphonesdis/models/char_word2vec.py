@@ -33,6 +33,7 @@ class CHARW2VNet(nn.Module):
         self.pretrained_embedding_dim = cfg.MODEL.PRETRAINED_EMBEDDING_DIM
         self.word_embeds = nn.Embedding(self.vocab_size,
                                             self.embedding_dim).to(self.device)
+        self.dropout_rate = 0.0
         self.bilstm = nn.LSTM(input_size=self.embedding_dim+self.pretrained_embedding_dim,
                               hidden_size=self.hidden_dim,
                               num_layers=self.num_layers,
