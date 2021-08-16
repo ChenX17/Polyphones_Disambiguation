@@ -17,3 +17,4 @@ outputs_charw2ccws/
 outputs_charw2cflag/
 save/
 run.sh
+run_word2vec.sh
