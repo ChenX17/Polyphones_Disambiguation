@@ -13,18 +13,19 @@ import torch
 from polyphonesdis.core.config import cfg
 from polyphonesdis.datasets.char_word2vec import CHARW2CDataSet
 from polyphonesdis.datasets.char_word2vec_pos_cws_flag import CHARW2CPOSCWSFLAGDataSet
+from polyphonesdis.datasets.char_word2vec_mask import CHARW2CPOSCWSFLAGMASKDataSet
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data.sampler import RandomSampler
 
 
 # Supported datasets
-_DATASETS = {"charw2vposcwsflag": CHARW2CPOSCWSFLAGDataSet, "charw2v": CHARW2CDataSet}
+_DATASETS = {"charw2vposcwsflag": CHARW2CPOSCWSFLAGDataSet, "charw2v": CHARW2CDataSet, "chaew2vmask":CHARW2CPOSCWSFLAGMASKDataSet}
 # Default data directory (/path/pycls/pycls/datasets/data)
 _DATA_DIR = os.path.join(os.path.dirname(__file__),'../..', "preprocess")
 
 # Relative data paths to default data directory
 # _PATHS = {"cifar10": "cifar10", "imagenet": "imagenet"}
-_PATHS = {"charw2vposcwsflag" : "ripe_char_word2vec_pos_cws_flag", "charw2v": "ripe_word2vec_7w"}
+_PATHS = {"charw2vposcwsflag" : "ripe_char_word2vec_pos_cws_flag", "charw2v": "ripe_word2vec_7w", "chaew2vmask":"ripe_char_word2vec_pos_cws_flag"}
 
 vocab_path = 'preprocess/vocab.txt'
 tag_path = 'preprocess/tag.txt'

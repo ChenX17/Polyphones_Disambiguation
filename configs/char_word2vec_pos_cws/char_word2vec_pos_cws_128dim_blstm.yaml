@@ -1,5 +1,5 @@
 MODEL:
-  TYPE: charw2ccws
+  TYPE: charw2cposcws
   DEPTH: 1
   NUM_CLASSES: 2
   VOCAB_SIZE: 4941
@@ -9,7 +9,7 @@ MODEL:
   FLAG_SIZE: 1
   EMBEDDING_DIM: 64
   NUM_LAYER: 1
-  HIDDEN_DIM: 64
+  HIDDEN_DIM: 128
   PRETRAINED_EMBEDDING_DIM: 200
   DROPOUT_EMBEDDING: 0.3
   DROPOUT_BLSTM: 0.3
@@ -23,11 +23,11 @@ OPTIM:
   BASE_LR: 0.001
   LR_POLICY: steps
   STEPS: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
-  LR_MULT: 0.70
-  MAX_EPOCH: 24
+  LR_MULT: 0.75
+  MAX_EPOCH: 20
   MOMENTUM: 0.9
   NESTEROV: True
-  WEIGHT_DECAY: 0.00001
+  WEIGHT_DECAY: 0.00002
 TRAIN:
   DATASET: 'charw2vposcwsflag'
   SPLIT: train
@@ -36,11 +36,11 @@ TRAIN:
 TEST:
   DATASET: 'charw2vposcwsflag'
   SPLIT: test
-  BATCH_SIZE: 25
+  BATCH_SIZE: 256
   IM_SIZE: 256
 NUM_GPUS: 1
 DATA_LOADER:
   NUM_WORKERS: 16
 CUDNN:
   BENCHMARK: True
-OUT_DIR: 'save/outputs_charw2ccws'
+OUT_DIR: 'save/outputs_charw2cposcws_128dim_blstm'
