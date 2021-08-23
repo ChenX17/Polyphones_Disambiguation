@@ -52,7 +52,7 @@ class CHARW2VMASKNet(nn.Module):
         # Maps the output of BiLSTM into tag space.
         self.hidden2tag = nn.Linear(self.hidden_dim * 4,
                                     self.tagset_size)
-        self.alpha = torch.Tensor([-1e3])
+        self.alpha = torch.Tensor([1e3])
 
     
     def forward(self, inputs, target, seq_lens):
