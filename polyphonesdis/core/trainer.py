@@ -31,6 +31,11 @@ from tensorboardX import SummaryWriter
 # writer = SummaryWriter(cfg.OUT_DIR)
 logger = logging.get_logger(__name__)
 
+vocab_path = 'preprocess/vocab.txt'
+tag_path = 'preprocess/tag.txt'
+feature_to_index, index_to_feature = load_vocab(vocab_path)
+tag_to_index, index_to_tag = build_tags_from_file(tag_path)
+
 
 def setup_env():
     """Sets up environment for training or testing."""
@@ -77,6 +82,46 @@ def setup_model():
         model = ddp(module=model, device_ids=[cur_device], output_device=cur_device)
     return model
 
+def convert_id2char(items):
+    res = []
+    for i in items:
+        i = i.cpu().item()
+        if i in index_to_feature['word'].keys():
+            res.append(index_to_feature['word'][i])
+        else:
+            res.append('<unk>')
+    return res
+
+def convert_id2tag(items):
+    res = []
+    for i in items:
+        i = i.cpu().item()
+        if i in index_to_tag.keys():
+            res.append(index_to_tag[i])
+        else:
+            res.append('<unk>')
+    return res
+
+def decode(texts, labels, preds, seq_lens):
+    batch_res = []
+    batch_size = preds.size()[0]
+    for i in range(batch_size):
+        preds_i = preds[i][:seq_lens[i]]
+        text_i = texts[i][:seq_lens[i]]
+        label_i = labels[i][:seq_lens[i]]
+        chars = convert_id2char(text_i)
+        results = convert_id2tag(preds_i)
+        index = ((label_i > 1).nonzero(as_tuple=True)[0])
+        if torch.numel(index) != 1:
+            import pdb;pdb.set_trace()
+        index = index.view(-1).item()
+        
+        res = ''.join(chars[:index+1])+'('+results[index]+')'+''.join(chars[index+1:])
+        print(res)
+        batch_res.append(''.join(res))
+
+    return batch_res
+
 
 def comp_loss(preds, labels, seq_lens, loss_fun):
     loss = loss_fun(preds.transpose(1, 2), labels)
@@ -100,6 +145,7 @@ def train_epoch(loader, model, ema, loss_fun, optimizer, meter, cur_epoch, write
     total_poly = 0
     total_correct_poly = 0
     total_loss = 0.0
+    alpha = torch.Tensor([-1e3]).cuda()
     for cur_iter, (inputs, labels, seq_lens) in enumerate(loader):
         # Transfer the data to the current GPU device
         for key in inputs.keys():
@@ -116,6 +162,7 @@ def train_epoch(loader, model, ema, loss_fun, optimizer, meter, cur_epoch, write
         batch_size, max_seq_len = inputs['char'].size()
         mask = (torch.arange(max_seq_len).expand(
                 batch_size, max_seq_len) < seq_lens.unsqueeze(1)).cuda()
+        preds = preds + (1-inputs['mask'])*alpha
         accuracy, poly, correct_poly = acc(mask, labels, preds)
         total_poly += poly
         total_correct_poly += correct_poly
@@ -150,6 +197,7 @@ def test_epoch(loader, model, meter, cur_epoch, loss_fun, writer=None):
     total_correct_poly = 0
     rec = 0.0
     total_loss = 0.0
+    alpha = torch.Tensor([-1e3]).cuda()
     for cur_iter, (inputs, labels, seq_lens) in enumerate(loader):
         # Transfer the data to the current GPU device
         for key in inputs.keys():
@@ -165,6 +213,7 @@ def test_epoch(loader, model, meter, cur_epoch, loss_fun, writer=None):
         mask = (torch.arange(max_seq_len).expand(
                 batch_size, max_seq_len) < seq_lens.unsqueeze(1)).cuda()
 
+        preds = preds + (1-inputs['mask'])*alpha
         accuracy, poly, correct_poly = acc(mask, labels, preds)
         meter.update_stats(loss, accuracy, batch_size)
         total_poly += poly
@@ -191,6 +240,7 @@ def train_model():
     optimizer = optim.construct_optimizer(model)
     # Load checkpoint or initial weights
     start_epoch = 0
+    
     if cfg.TRAIN.AUTO_RESUME and cp.has_checkpoint():
         file = cp.get_last_checkpoint()
         epoch = cp.load_checkpoint(file, model, ema, optimizer)[0]
@@ -239,6 +289,72 @@ def test_model():
     test_meter = meters.TestMeter(len(test_loader))
     # Evaluate the model
     test_epoch(test_loader, model, test_meter, 0, writer=None)
+
+@torch.no_grad()
+def infer_epoch(loader, model, meter, cur_epoch, loss_fun, filename, writer=None):
+    model.eval()
+    model.cuda()
+    meter.reset()
+    meter.iter_tic()
+    total_acc = 0.0
+    total_poly = 0
+    total_correct_poly = 0
+    rec = 0.0
+    total_loss = 0.0
+    alpha = torch.Tensor([-1e3]).cuda()
+    all_result = []
+    for cur_iter, (inputs, labels, seq_lens) in enumerate(loader):
+        # Transfer the data to the current GPU device
+        for key in inputs.keys():
+            inputs[key] = inputs[key].cuda()
+        labels = labels.cuda()
+        # Compute the predictions
+        preds = model(inputs, labels, seq_lens)
+        
+        loss = comp_loss(preds, labels, seq_lens, loss_fun)
+
+        preds = preds + (1-inputs['mask'])*alpha
+        batch_res = decode(inputs['char'], labels, torch.argmax(preds, dim=-1), seq_lens)
+        if len(all_result)==0:
+            all_result = batch_res
+        else:
+            all_result += batch_res
+
+        # Compute the errors
+        batch_size, max_seq_len = inputs['char'].size()
+        mask = (torch.arange(max_seq_len).expand(
+                batch_size, max_seq_len) < seq_lens.unsqueeze(1)).cuda()
+
+        
+        accuracy, poly, correct_poly = acc(mask, labels, preds)
+        total_poly += poly
+        total_correct_poly += correct_poly
+        total_loss += loss.item()
+        
+
+    f = open(filename, 'w')
+    f.writelines('\n'.join(all_result))
+    f.close()
+    return float(total_correct_poly)/float(total_poly)
+
+
+@torch.no_grad()
+def infer_model():
+    """inference a trained model."""
+    # Setup training/testing environment
+    setup_env()
+    # Construct the model
+    model = setup_model()
+    # Load model weights
+    cp.load_checkpoint(cfg.TEST.WEIGHTS, model)
+    logger.info("Loaded model weights from: {}".format(cfg.TEST.WEIGHTS))
+    # Create data loaders and meters
+    test_loader = data_loader.construct_test_loader()
+    test_meter = meters.TestMeter(len(test_loader))
+    filename = cfg.OUT_DIR + 'predict.txt'
+    loss_fun = builders.build_loss_fun("cross_entropy", "none").cuda()
+    # Evaluate the model
+    infer_epoch(test_loader, model, test_meter, 0, loss_fun, filename, writer=None)
 
 
 def time_model():
