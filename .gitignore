@@ -20,3 +20,5 @@ run.sh
 preprocess/dyzcorpus/
 preprocess/tongji.py
 run_word2vec.sh
+preprocess/raw_0824/
+preprocess/raw_0824bk/

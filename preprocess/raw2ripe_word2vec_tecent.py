@@ -11,8 +11,11 @@ from multiprocessing import Pool
 import numpy as np
 import copy
 
-raw_dir = 'raw_cut0802/'
-ripe_dir = 'ripe_char_word2vec_pos_cws_flag/'
+# raw_dir = 'raw_cut0802/'
+# ripe_dir = 'ripe_char_word2vec_pos_cws_flag/'
+
+raw_dir = 'raw_0824/'
+ripe_dir = 'ripe_0824/'
 re_en = re.compile('E{2,}')
 
 print(glob.glob(raw_dir+'*.txt'))
