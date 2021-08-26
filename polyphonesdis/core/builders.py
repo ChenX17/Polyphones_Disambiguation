@@ -14,6 +14,8 @@ from polyphonesdis.models.char_word2vec_pos import CHARW2VPOSNet
 from polyphonesdis.models.char_word2vec_cws import CHARW2VCWSNet
 from polyphonesdis.models.char_word2vec_flag import CHARW2VFLAGNet
 from polyphonesdis.models.char_word2vec_pos_cws import CHARW2VCWSPOSNet
+from polyphonesdis.models.char_word2vec_mask import CHARW2VMASKNet
+from polyphonesdis.models.char_word2vec_nomask import CHARW2VNMNet
 
 from torch.nn import MSELoss
 from torch.nn import BCELoss
@@ -21,7 +23,7 @@ from torch.nn import CrossEntropyLoss
 
 
 # Supported models
-_models = {"charw2c": CHARW2VNet, "charw2cpos": CHARW2VPOSNet, "charw2ccws": CHARW2VCWSNet, "charw2cflag":CHARW2VFLAGNet, "charw2cposcws": CHARW2VCWSPOSNet}
+_models = {"charw2c": CHARW2VNet, "charw2cpos": CHARW2VPOSNet, "charw2ccws": CHARW2VCWSNet, "charw2cflag":CHARW2VFLAGNet, "charw2cposcws": CHARW2VCWSPOSNet, "charw2cmask":CHARW2VMASKNet, "charv2cnomask":CHARW2VNMNet}
 
 # Supported loss functions
 _loss_funs = {

@@ -1,6 +1,7 @@
 import os
 import re
 import json
+
 def load_vocab(path_vocab):
     feature_to_index = dict()
     index_to_feature = dict()
