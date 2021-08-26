@@ -100,7 +100,6 @@ def get_vec(model, text, pos, idx=0):
     cuted_pos = []
     while ' ' in text:
         text.remove(' ')
-        # import pdb;pdb.set_trace()
     for char in text:
         count = len(char)
         while count > 0:
@@ -134,7 +133,6 @@ def get_vec(model, text, pos, idx=0):
                                 vecs.append(model[item[-len_item]])
                             cuted_texts.append(item[-len_item])
                             len_item -= 1
-    # old_pos = [tmp.flag for tmp in list(jieba.posseg.cut(''.join(cuted_texts)))]
     
     new_pos = [tmp.flag for tmp in list(jieba.posseg.cut(' '.join(cuted_texts)))]
     new_texts = [tmp.word for tmp in list(jieba.posseg.cut(' '.join(cuted_texts)))]
@@ -147,7 +145,6 @@ def get_vec(model, text, pos, idx=0):
             continue
         if i == len(new_texts)-1:
             continue
-            #processed_pos.append(new_pos[i])
         elif new_texts[i] == ' ' and new_texts[i+1] == ' ':
             processed_pos.append(new_pos[i+1])
         elif new_texts[i] == ' ' and new_texts[i+1] != ' ':
