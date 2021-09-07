@@ -14,7 +14,7 @@ import copy
 # raw_dir = 'raw_cut0802/'
 # ripe_dir = 'ripe_char_word2vec_pos_cws_flag/'
 
-raw_dir = 'raw_0824/'
+raw_dir = 'raw_cut_0824/'
 ripe_dir = 'ripe_0824/'
 re_en = re.compile('E{2,}')
 
@@ -195,8 +195,12 @@ def read_file(filename, pro=0):
             import pdb;pdb.set_trace()
         uttid, word, label, text = line.strip().split('\t')
         idx += 1
+        if len(text) <= 1:
+            print(text)
+            import pdb;pdb.set_trace()
+        else:
+            continue
         
-        # print(text)
         parts = re_cut.split(text)
         label = ['_']*len(parts[0]) + [label] + ['_']*len(parts[2])
         text = parts[0] + word + parts[2]
@@ -222,7 +226,6 @@ def read_file(filename, pro=0):
         pos_list = [item.flag for item in word_pos]
 
         # vec = get_vec(model_words, list(jieba.cut(text)))
-        
         vec, pos, cuted_text = get_vec(model_words, word_list, pos_list)
         
         pos = get_pos(cuted_text, pos)
@@ -254,10 +257,10 @@ def read_file(filename, pro=0):
     f = open(ripe_dir+filename.split('.')[0].split('/')[-1].split('_')[1]+'files.txt')
     f.writelines('\n'.join(filelist))
     f.close()
-    print('end ', save_path)
+    print('end ', filename)
 if __name__=='__main__':
     from multiprocessing import Process
-    file_list = sorted(glob.glob(raw_dir+'*.txt'))[::-1]
+    file_list = sorted(glob.glob(raw_dir+'*.txt'))
     for item in file_list:
         #process_list = []
         #for i in range(5):
