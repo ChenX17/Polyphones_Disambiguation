@@ -340,14 +340,6 @@ if __name__=='__main__':
     for item in file_list:
         if 'train' not in item:
             continue
-        #process_list = []
-        #for i in range(5):
-        #    p = Process(target=read_file,args=(item,i,))
-        #    p.start()
-        #    process_list.append(p)
-
-        #for i in process_list:
-        #    p.join()
         read_file(item)
         #p.close()
         #p.join()
