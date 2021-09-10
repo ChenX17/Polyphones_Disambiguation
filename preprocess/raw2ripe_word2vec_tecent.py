@@ -15,7 +15,7 @@ import copy
 # ripe_dir = 'ripe_char_word2vec_pos_cws_flag/'
 
 raw_dir = 'raw_cut_0824/'
-ripe_dir = 'ripe_0824/'
+ripe_dir = 'ripe_aug/'
 re_en = re.compile('E{2,}')
 
 print(glob.glob(raw_dir+'*.txt'))
@@ -160,12 +160,7 @@ def get_vec(model, text, pos, idx=0):
         print(new_texts)
         print(cuted_texts)
         import pdb;pdb.set_trace()
-    # print(old_pos)
-    # print(list(jieba.posseg.cut(''.join(cuted_texts))))
-    # print(new_pos)
-    # print(list(jieba.posseg.cut(' '.join(cuted_texts)))[::2])
 
-    #import pdb;pdb.set_trace()
     if len(vecs) != len(''.join(text)):
         import pdb;pdb.set_trace()
     assert len(vecs) == len(''.join(text)), 'different length'
@@ -199,7 +194,7 @@ def read_file(filename, pro=0):
             print(text)
             import pdb;pdb.set_trace()
         else:
-            continue
+            pass
         
         parts = re_cut.split(text)
         label = ['_']*len(parts[0]) + [label] + ['_']*len(parts[2])
@@ -254,9 +249,6 @@ def read_file(filename, pro=0):
         if idx % 100 == 0:
             print(idx,' sentences!')
 
-    f = open(ripe_dir+filename.split('.')[0].split('/')[-1].split('_')[1]+'files.txt')
-    f.writelines('\n'.join(filelist))
-    f.close()
     print('end ', filename)
 if __name__=='__main__':
     from multiprocessing import Process

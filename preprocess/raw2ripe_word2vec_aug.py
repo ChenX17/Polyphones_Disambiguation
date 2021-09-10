@@ -10,6 +10,7 @@ import jieba.posseg
 from multiprocessing import Pool
 import numpy as np
 import copy
+import math
 
 # raw_dir = 'raw_cut0802/'
 # ripe_dir = 'ripe_char_word2vec_pos_cws_flag/'
@@ -18,8 +19,7 @@ raw_dir = 'raw_cut_0824/'
 ripe_dir = 'ripe_aug/'
 re_en = re.compile('E{2,}')
 
-aug_list = ['的:di1', '的:di4', '的:di2']
-
+base = 10000
 print(glob.glob(raw_dir+'*.txt'))
 
 def convert_eng(text):
@@ -57,7 +57,7 @@ def re_cut(model, words):
                 re_cut_words = list(jieba.cut(item))
                 for word in re_cut_words:
                     new_cut.append(word)
-            else:
+
                 new_cut.append(item)
         words = new_cut
         if flag:
@@ -105,7 +105,6 @@ def get_vec(model, text, pos, idx=0):
     cuted_pos = []
     while ' ' in text:
         text.remove(' ')
-        # import pdb;pdb.set_trace()
     for char in text:
         count = len(char)
         while count > 0:
@@ -115,11 +114,7 @@ def get_vec(model, text, pos, idx=0):
                 if count == 0:
                     cuted_texts.append(char)
             except:
-                #char not in model.vocab
-                if count > 3:
-                    items = re_cut(model, char)
-                else:
-                    items = [char]
+                items = [char]
                 length_sum = sum([len(item) for item in items])
                 count -= length_sum
 
@@ -139,7 +134,6 @@ def get_vec(model, text, pos, idx=0):
                                 vecs.append(model[item[-len_item]])
                             cuted_texts.append(item[-len_item])
                             len_item -= 1
-    # old_pos = [tmp.flag for tmp in list(jieba.posseg.cut(''.join(cuted_texts)))]
     
     new_pos = [tmp.flag for tmp in list(jieba.posseg.cut(' '.join(cuted_texts)))]
     new_texts = [tmp.word for tmp in list(jieba.posseg.cut(' '.join(cuted_texts)))]
@@ -152,7 +146,6 @@ def get_vec(model, text, pos, idx=0):
             continue
         if i == len(new_texts)-1:
             continue
-            #processed_pos.append(new_pos[i])
         elif new_texts[i] == ' ' and new_texts[i+1] == ' ':
             processed_pos.append(new_pos[i+1])
         elif new_texts[i] == ' ' and new_texts[i+1] != ' ':
@@ -165,12 +158,6 @@ def get_vec(model, text, pos, idx=0):
         print(new_texts)
         print(cuted_texts)
         import pdb;pdb.set_trace()
-    # print(old_pos)
-    # print(list(jieba.posseg.cut(''.join(cuted_texts))))
-    # print(new_pos)
-    # print(list(jieba.posseg.cut(' '.join(cuted_texts)))[::2])
-
-    #import pdb;pdb.set_trace()
     if len(vecs) != len(''.join(text)):
         import pdb;pdb.set_trace()
     assert len(vecs) == len(''.join(text)), 'different length'
@@ -202,7 +189,7 @@ def gen_aug(model_words, word_list, times, char):
 
     sorted_res = sorted(res_dict.items(), key=lambda x: x[1], reverse=True)
     if times > len(sorted_res):
-        import pdb;pdb.set_trace()
+        times = min(times,len(sorted_res))
     result = sorted_res[:times]
     return result
 
@@ -226,25 +213,49 @@ def read_file(filename, pro=0):
     phrases = []
     filelist = []
     model_words = KeyedVectors.load_word2vec_format("embeddings/70000-small.txt")
-    aug_model_words = KeyedVectors.load_word2vec_format("embeddings/1000000-small.txt")
+    aug_model_words = KeyedVectors.load_word2vec_format("embeddings/70000-small.txt")
+    size_dict = {}
+    count_dict = {}
+    word_max_count = {}
     for line in texts_lines:
         if len(line.strip().split('\t'))!=4:
             import pdb;pdb.set_trace()
         uttid, word, label, text = line.strip().split('\t')
-        # idx += 1
-        if word+':'+label not in aug_list:
+        if (word+':'+label) not in count_dict.keys():
+            count_dict[word+':'+label]=0
+            count_dict[word+':'+label]+=1
+        else:
+            count_dict[word+':'+label]+=1
+    for key in count_dict.keys():
+        if key.split(':')[0] not in word_max_count.keys():
+            word_max_count[key.split(':')[0]]=count_dict[key]
+        elif word_max_count[key.split(':')[0]] < count_dict[key]:
+            word_max_count[key.split(':')[0]]=count_dict[key]
+        else:
             continue
-        if word+':'+label == '的:di4':
-            times = 4
-        elif word+':'+label == '的:di2':
-            times = 6
-        elif word+':'+label == '的:di1':
-            times = 7
-
-        print(text)
+    total_aug_times = 0
+    for key in count_dict.keys():
+        #size_key = round(math.log(base/count_dict[key]))
+        size_key = round(math.log(word_max_count[key.split(':')[0]]/count_dict[key]))
+        if size_key < 0:
+            size_key = 0
+        size_dict[key] = size_key
+        total_aug_times += size_key * count_dict[key]
+    print('total_aug_times is :', total_aug_times)
+    f = open('auged_text_new.txt', 'a+')
+    for line in texts_lines:
+        if len(line.strip().split('\t'))!=4:
+            import pdb;pdb.set_trace()
+        uttid, word, label_i, text = line.strip().split('\t')
+        if word+':'+label_i not in count_dict.keys():
+            continue
+        elif size_dict[word+':'+label_i] == 0:
+            continue
+        else:
+            times = size_dict[word+':'+label_i]
 
         parts = re_cut.split(text)
-        label = ['_']*len(parts[0]) + [label] + ['_']*len(parts[2])
+        label = ['_']*len(parts[0]) + [label_i] + ['_']*len(parts[2])
         text = parts[0] + word + parts[2]
         text = list(text)
         ori_text = copy.deepcopy(text)
@@ -271,7 +282,6 @@ def read_file(filename, pro=0):
         auged_ids = 0
 
         for i in range(len(auged_texts)):
-            # import pdb;pdb.set_trace()
             idx += 1
             new_word_list = auged_texts[i][0].split('\t')[0].split(' ')
             word_idx = int(auged_texts[i][0].split('\t')[1])
@@ -282,17 +292,18 @@ def read_file(filename, pro=0):
             if label_idx != new_label_idx:
                 new_label = label.split(' ')
                 new_label = new_label[:ori_label_idx] + ['_'] * len(new_word_list[word_idx]) + new_label[label_idx:]
-                # import pdb;pdb.set_trace()
                 new_label = ' '.join(new_label)
                 flag = get_flag(new_label.split(' '))
-                # new_text = list(''.join(new_word_list))
             else:
                 flag = get_flag(label.split(' '))
                 new_label = label
-                # new_text = list(''.join(new_word_list))
 
-            # import pdb;pdb.set_trace()
             vec, pos, cuted_text = get_vec(model_words, new_word_list, pos_list)
+            poly_idx = 0
+            TMP_LABEL = new_label.split(' ')
+            for k in range(len(TMP_LABEL)):
+                if TMP_LABEL[k] != '_':
+                    poly_idx = k
             
             pos = get_pos(cuted_text, pos)
             cws = get_cws(cuted_text)
@@ -302,8 +313,8 @@ def read_file(filename, pro=0):
                 import pdb;pdb.set_trace()
 
             assert len(text)==len(vec)==len(pos)==len(cws)==len(flag)
-
-            
+            f.write(uttid+"_aug_"+str(i)+'\t'+word+'\t'+label_i+'\t'+text[:poly_idx]+'【'+text[poly_idx]+'】'+text[poly_idx+1:]+'\n')
+            '''
             df_data = {
                         "texts": text,
                         "labels": new_label,
@@ -319,16 +330,15 @@ def read_file(filename, pro=0):
             f.close()
             if idx %10 ==0:
                 print(idx, " sentences!")
-
-    f = open(ripe_dir+filename.split('.')[0].split('/')[-1].split('_')[1]+'files.txt')
-    f.writelines('\n'.join(filelist))
+            '''
+            if idx %200 ==0:
+                print(idx, " sentences!")
     f.close()
-    print('end ', save_path)
 if __name__=='__main__':
     from multiprocessing import Process
     file_list = sorted(glob.glob(raw_dir+'*.txt'))[::-1]
     for item in file_list:
-        if 'test' not in item:
+        if 'train' not in item:
             continue
         #process_list = []
         #for i in range(5):

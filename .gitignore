@@ -22,3 +22,8 @@ preprocess/tongji.py
 run_word2vec.sh
 preprocess/raw_0824/
 preprocess/raw_0824bk/
+preprocess/raw_cut_0824/
+preprocess/ripe_0824/
+preprocess/auged_text.txt
+preprocess/auged_text_new.txt
+preprocess/ripe_aug/
