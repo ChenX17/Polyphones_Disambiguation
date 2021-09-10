@@ -112,10 +112,7 @@ def get_vec(model, text, pos, idx=0):
                     cuted_texts.append(char)
             except:
                 #char not in model.vocab
-                if count > 3:
-                    items = re_cut(model, char)
-                else:
-                    items = [char]
+                items = [char]
                 length_sum = sum([len(item) for item in items])
                 count -= length_sum
 
