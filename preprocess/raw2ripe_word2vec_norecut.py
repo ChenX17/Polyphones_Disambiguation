@@ -151,7 +151,6 @@ def get_vec(model, text, pos, idx=0):
         else:
             continue
 
-
     if len(processed_pos) != len(cuted_texts):
         print(new_texts)
         print(cuted_texts)
@@ -162,9 +161,61 @@ def get_vec(model, text, pos, idx=0):
     assert len(vecs) == len(''.join(text)), 'different length'
     return np.array(vecs), processed_pos, cuted_texts
 
+def read_cuted_speech(idx, lines):
+    cuted_words = lines[2*idx].strip().split(' ')
+    poses = lines[2*idx+1].strip().split(' ')
+    re_char_punct = re.compile(r'(([\u4e00-\u9fa5]+):)')
+
+    new_cuted_words = []
+    new_poses = []
+
+    # for i,item in enumerate(cuted_words):
+    #     if re_char_punct.search(item):
+    #         matchers = re_char_punct.findall(item)
+    #         for matcher in matchers:
+    #             new_cuted_words.append(matcher[1])
+    #             new_poses.append(poses[i])
+    #             new_cuted_words.append(matcher[0].replace(matcher[1], "", 1))
+    #             new_poses.append("wp") 
+    #     else:
+    #         new_cuted_words.append(item)
+    #         new_poses.append(poses[i])
+    # cuted_words = new_cuted_words
+    # poses = new_poses
+    
+    # while "sp" in cuted_words:
+    #     for i, item in enumerate(cuted_words):
+    #         if item == "sp":
+    #             cuted_words = cuted_words[:i] + cuted_words[i+1:]
+    #             poses = poses[:i] + poses[i+1:]
+    #             break
+    # while "(" in cuted_words:
+    #     for i, item in enumerate(cuted_words):
+    #         if item == "(":
+    #             cuted_words = cuted_words[:i] + cuted_words[i+1:]
+    #             poses = poses[:i] + poses[i+1:]
+    #             break
+    # while ")" in cuted_words:
+    #     for i, item in enumerate(cuted_words):
+    #         if item == ")":
+    #             cuted_words = cuted_words[:i] + cuted_words[i+1:]
+    #             poses = poses[:i] + poses[i+1:]
+    #             break
+    # if ":" in cuted_words and "。" in cuted_words and ("评论" in cuted_words or "四十九" in cuted_words):
+    #     print("there")
+    #     cuted_words.remove(":")
+        # import pdb;pdb.set_trace()
+    return cuted_words, poses
+
 
 def read_file(filename, pro=0):
     re_cut = re.compile(r'(【.】)')
+    re_kuohao = re.compile(r'(【([\u4e00-\u9fa5]{2,})】)')
+    re_kuohao1 = re.compile(r'(【([\u4e00-\u9fa5]{2,}))')
+    re_kuohao2 = re.compile(r'(([\u4e00-\u9fa5]{2,})】)')
+    re_kuohao3 = re.compile(r'((】[\u4e00-\u9fa5]?)】)')
+    re_kuohao4 = re.compile(r"(【([\u4e00-\u9fa5]?【))")
+    re_multi_punct = re.compile(r"([\.。,，？\?!！；;、：:]{2,})")
     f = open(filename, 'r', encoding='utf-8')
     texts = []
     labels = []
@@ -180,12 +231,58 @@ def read_file(filename, pro=0):
     sentences = []
     phrases = []
     filelist = []
+    speech_cuted_trainlines = open("cuted_by_speech/cuted_train.txt", "r").readlines()
+    speech_cuted_testlines = open("cuted_by_speech/cuted_test.txt", "r").readlines()
     model_words = KeyedVectors.load_word2vec_format("embeddings/70000-small.txt")
     for line in texts_lines:
         if len(line.strip().split('\t'))!=4:
             import pdb;pdb.set_trace()
         uttid, word, label, text = line.strip().split('\t')
-        idx += 1
+        # text = text.replace("。。。","。").replace("。。","。").replace("、、","、").replace("(","").replace(")","").replace("：，", "，").replace("，。", "。")
+        # text = text.replace("？。", "。").replace("；。","。").replace("....","。").replace("、。", "。").replace("、？","？").replace("、、、", "、")
+        # text = text.replace("? ", " ").replace("： ", " ").replace("姚某兰：", "姚某兰").replace("， ", " ")
+
+        # if uttid == "00003702":
+        #     print("here")
+        #     # idx += 1
+        #     # continue
+        #     import pdb;pdb.set_trace()
+        # # else:
+        # #     continue
+        # if re_multi_punct.search(text):
+        #     matcher = re_multi_punct.findall(text)
+        #     if "." in matcher[0] or "。" in matcher[0]:
+        #         if ":" in matcher[0]:
+        #             pass
+        #         else:
+        #             text = text.replace(matcher[0], "。")
+        #     elif "?" in matcher[0] or "？" in matcher[0]:
+        #         text = text.replace(matcher[0], "？")
+        #     elif "！" in matcher[0] or "!" in matcher[0]:
+        #         text = text.replace(matcher[0], "！")
+        #     elif "，" in matcher[0] or "," in matcher[0]:
+        #         text = text.replace(matcher[0], "，")
+        #     elif "；" in matcher[0] or ";" in matcher[0]:
+        #         text = text.replace(matcher[0], "；")
+        #     elif "、" in matcher[0]:
+        #         text = text.replace(matcher[0], "、")
+        #     elif "：" in matcher[0] or ":" in matcher[0]:
+        #         text = text.replace(matcher[0], "：")
+        if re_kuohao.search(text):
+            matcher = re_kuohao.findall(text)[0]
+            text = text.replace(matcher[0], matcher[1])
+        if re_kuohao1.search(text):
+            matcher = re_kuohao1.findall(text)[0]
+            text = text.replace(matcher[0], matcher[1])
+        if re_kuohao2.search(text):
+            matcher = re_kuohao2.findall(text)[0]
+            text = text.replace(matcher[0], matcher[1])
+        if re_kuohao3.search(text):
+            matcher = re_kuohao3.findall(text)[0]
+            text = text.replace(matcher[0], matcher[1])
+        if re_kuohao4.search(text):
+            matcher = re_kuohao4.findall(text)[0]
+            text = text.replace(matcher[0], matcher[1])
         if len(text) <= 1:
             print(text)
             import pdb;pdb.set_trace()
@@ -209,12 +306,20 @@ def read_file(filename, pro=0):
 
         text = ''.join(text)
         label = ' '.join(label)
+    
+        speech_cuted = True
         #vec = get_vec(model, text)
+        if speech_cuted:
+            if "train" in filename:
+                speech_cuted_lines = speech_cuted_trainlines
+            else:
+                speech_cuted_lines = speech_cuted_testlines
+            word_list, pos_list = read_cuted_speech(idx, speech_cuted_lines)
 
-        word_pos = list(jieba.posseg.cut(text))
-        
-        word_list = [item.word for item in word_pos]
-        pos_list = [item.flag for item in word_pos]
+        else:
+            word_pos = list(jieba.posseg.cut(text))
+            word_list = [item.word for item in word_pos]
+            pos_list = [item.flag for item in word_pos]
 
         # vec = get_vec(model_words, list(jieba.cut(text)))
         vec, pos, cuted_text = get_vec(model_words, word_list, pos_list)
@@ -223,7 +328,21 @@ def read_file(filename, pro=0):
         cws = get_cws(cuted_text)
         flag = get_flag(label.split(' '))
         text = ''.join(cuted_text)
+        label_list = label.split(' ')
+        for indexl in range(len(label_list)):
+            if label_list[indexl] != "_":
+                poly_idx = indexl
+                break
+        if text[poly_idx] != word:
+            print(text)
+            print(word)
+            print(label)
+            import pdb;pdb.set_trace()
+
+
+        
         if not len(text)==len(vec)==len(pos)==len(cws)==len(flag):
+            print(ori_text)
             import pdb;pdb.set_trace()
 
         assert len(text)==len(vec)==len(pos)==len(cws)==len(flag)
@@ -242,6 +361,8 @@ def read_file(filename, pro=0):
         f = open(save_path, 'wb')
         df_data = pickle.dump(df_data, f)
         f.close()
+        idx += 1
+        # print(idx)
         if idx % 100 == 0:
             print(idx,' sentences!')
 
@@ -250,6 +371,8 @@ if __name__=='__main__':
     from multiprocessing import Process
     file_list = sorted(glob.glob(raw_dir+'*.txt'))
     for item in file_list:
+        if "train" in item:
+            continue
         #process_list = []
         #for i in range(5):
         #    p = Process(target=read_file,args=(item,i,))

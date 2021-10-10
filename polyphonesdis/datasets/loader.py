@@ -14,12 +14,13 @@ from polyphonesdis.core.config import cfg
 from polyphonesdis.datasets.char_word2vec import CHARW2CDataSet
 from polyphonesdis.datasets.char_word2vec_pos_cws_flag import CHARW2CPOSCWSFLAGDataSet
 from polyphonesdis.datasets.char_word2vec_mask import CHARW2CPOSCWSFLAGMASKDataSet
+from polyphonesdis.datasets.char_word2vec_mask import CHARW2CPOSCWSFLAGMASKDataSet
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data.sampler import RandomSampler
 
 
 # Supported datasets
-_DATASETS = {"charw2vposcwsflag": CHARW2CPOSCWSFLAGDataSet, "charw2v": CHARW2CDataSet, "chaew2vmask":CHARW2CPOSCWSFLAGMASKDataSet}
+_DATASETS = {"charw2vposcwsflag": CHARW2CPOSCWSFLAGDataSet, "charw2v": CHARW2CDataSet, "charw2vmask":CHARW2CPOSCWSFLAGMASKDataSet, "charw2vsl": CHARW2CSLABELDataSet}
 # Default data directory (/path/pycls/pycls/datasets/data)
 _DATA_DIR = os.path.join(os.path.dirname(__file__),'../..', "preprocess")
 
