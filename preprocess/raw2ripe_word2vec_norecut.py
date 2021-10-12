@@ -371,8 +371,8 @@ if __name__=='__main__':
     from multiprocessing import Process
     file_list = sorted(glob.glob(raw_dir+'*.txt'))
     for item in file_list:
-        if "train" in item:
-            continue
+        #if "train" in item:
+        #`    continue
         #process_list = []
         #for i in range(5):
         #    p = Process(target=read_file,args=(item,i,))
